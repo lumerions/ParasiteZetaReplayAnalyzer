@@ -17,3 +17,4 @@ C:\Users\Admin\Desktop\SC2ReplayParasiteAnalyzer\bin\Debug\net10.0\s2protocol.NE
 C:\Users\Admin\Desktop\SC2ReplayParasiteAnalyzer\bin\Debug\net10.0\ICSharpCode.SharpZipLib.dll
 C:\Users\Admin\Desktop\SC2ReplayParasiteAnalyzer\obj\Debug\net10.0\SC2Repla.8AA961AE.Up2Date
 C:\Users\Admin\Desktop\SC2ReplayParasiteAnalyzer\bin\Debug\net10.0\Interop.IWshRuntimeLibrary.dll
+C:\Users\Admin\Desktop\SC2ReplayParasiteAnalyzer\obj\Debug\net10.0\SC2ReplayParasiteAnalyzer.sourcelink.json

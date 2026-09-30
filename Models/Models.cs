@@ -17,7 +17,7 @@ public class Models
     public class GameResultsDto
     {
         public string ReplayName {get; init;}
-        public Dictionary<string, int> Results {get; init;}
+        public string ReplayLength {get; init;}
         public Dictionary<string, string> Players {get; init;}
     }
 

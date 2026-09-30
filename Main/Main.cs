@@ -7,6 +7,7 @@ using s2protocol.NET.Models;
 using IWshRuntimeLibrary;
 using System.Collections.Concurrent;
 using Internal.Models;
+using Internal.ExportImporter;
 
 namespace Internal.Main;
 
@@ -310,7 +311,6 @@ public class InternalMain
         Stopwatch stopwatch = new();
         stopwatch.Start();
         var Count = 0;
-        var LoadOne = false;
         var DefaultSC2DocumentPath = Path.Combine(DefaultDocumentsPath, "StarCraft II");
         foreach (var item in Directory.GetFiles(DefaultSC2DocumentPath))
         {
@@ -363,7 +363,7 @@ public class InternalMain
         }
 
         stopwatch.Stop();
-
+        ExportImport.ImportAsXml("ReplayData.xml");
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 
