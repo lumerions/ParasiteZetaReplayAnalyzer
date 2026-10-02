@@ -20,8 +20,10 @@ public class InternalMain
     private static readonly string DefaultDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     private static readonly ReplayDecoder decoder = new();
     private static readonly WshShell shell = new();
+    private static HashSet<string> UserPlayerHandles = new();
+    private static List<string> MostWinnedWithAlienForms = new();
 
-    public static (int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed) GetUserInformation (string PlayerHandle)
+    public static (int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths) GetUserInformation (string PlayerHandle)
     {
         var ExistingMechKills = 0;
         var ExistingAlienKills = 0;
@@ -29,6 +31,7 @@ public class InternalMain
         var ExistingTies = 0;
         var ExistingVictories = 0;
         var ExistingGamesPlayed = 0;
+        var ExistingDeaths = 0;
 
         if (FinalResults.TryGetValue(PlayerHandle, out var PlayerEntry))
         {
@@ -38,9 +41,10 @@ public class InternalMain
             ExistingTies = PlayerEntry.Ties;
             ExistingVictories = PlayerEntry.Victories;
             ExistingGamesPlayed = PlayerEntry.GamesPlayed;
+            ExistingDeaths = PlayerEntry.Deaths;
         }
 
-        return (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed);
+        return (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths);
     }
 
     public static bool IsAlienUnit (string PlayerUnitTypeWhoDied)
@@ -112,7 +116,7 @@ public class InternalMain
             if (PlayerHandle == "Unknown") continue;
             PlayerIdHandles[player.WorkingSetSlotId] = PlayerHandle;
 
-            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed) = GetUserInformation(PlayerHandle);
+            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
             FinalResults.AddOrUpdate(PlayerHandle,
             new Models.Models.FinalResultsDto
@@ -122,6 +126,7 @@ public class InternalMain
                 MechKills = ExistingMechKills,
                 Ties = ExistingTies,
                 Victories = ExistingVictories,
+                Deaths = ExistingDeaths,
                 GamesPlayed = 1
             }, 
             (key, currentData) => {
@@ -133,6 +138,7 @@ public class InternalMain
                     MechKills = ExistingMechKills,
                     Ties = ExistingTies,
                     Victories = ExistingVictories,
+                    Deaths = ExistingDeaths,
                     GamesPlayed = ExistingGamesPlayed + 1
                 };
             });
@@ -154,7 +160,7 @@ public class InternalMain
 
             if (IsAlienUnit(UnitType))
             {
-                AliveAlienPlayers.Add(GetHandlesByPlayerId(PlayerIdWhoDied));
+                AliveAlienPlayers.Add(GetHandlesByPlayerId(PlayerIdWhoDied) + "?" + UnitType);
             } else
             {
                 if (!IsMechUnit(UnitType))
@@ -186,14 +192,25 @@ public class InternalMain
             var PlayerUnitTypeWhoDied = KillerUnitBornEvent.UnitTypeName;
             var AlienKill = IsAlienUnit(PlayerUnitTypeWhoDied);
             var MechKill = IsMechUnit(PlayerUnitTypeWhoDied);
+            var UserUsingApplicationDied = false;
 
             if (IsAlienUnit(UnitType))
             {
-                AliveAlienPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied));
+                AliveAlienPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied) + "?" + UnitType);
+
+                if (UserPlayerHandles.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)))
+                {
+                    UserUsingApplicationDied = true;
+                }
             } else
             {
                 if (!IsMechUnit(UnitType)) {
                     AliveHumanPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied));
+
+                    if (UserPlayerHandles.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)))
+                    {
+                        UserUsingApplicationDied = true;
+                    }
                 }
             }
 
@@ -206,7 +223,7 @@ public class InternalMain
 
             if (string.IsNullOrEmpty(PlayerHandle)) continue;
 
-            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed) = GetUserInformation(PlayerHandle);
+            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
             FinalResults.AddOrUpdate(PlayerHandle, 
             new Models.Models.FinalResultsDto
@@ -216,6 +233,7 @@ public class InternalMain
                 MechKills = ExistingMechKills,
                 Ties = ExistingTies,
                 Victories = ExistingVictories,
+                Deaths = ExistingDeaths,
                 GamesPlayed = 1
             }, 
             (key, currentData) => {
@@ -233,6 +251,11 @@ public class InternalMain
                     }
                 }
 
+                if (UserUsingApplicationDied)
+                {
+                    ExistingDeaths += 1;
+                }
+
                 return new Models.Models.FinalResultsDto 
                 {
                     AlienKills = ExistingAlienKills,
@@ -240,6 +263,7 @@ public class InternalMain
                     MechKills = ExistingMechKills,
                     Ties = ExistingTies,
                     Victories = ExistingVictories,
+                    Deaths = ExistingDeaths,
                     GamesPlayed = ExistingGamesPlayed
                 };
             });
@@ -261,7 +285,7 @@ public class InternalMain
 
         void UpdateWinLoseCount (string PlayerHandle, bool Won, bool? Tie)
         {
-            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed) = GetUserInformation(PlayerHandle);
+            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
             FinalResults.AddOrUpdate(PlayerHandle, 
                 new Models.Models.FinalResultsDto
@@ -271,6 +295,7 @@ public class InternalMain
                     MechKills = ExistingMechKills,
                     Ties = ExistingTies,
                     Victories = ExistingVictories,
+                    Deaths = ExistingDeaths,
                     GamesPlayed = 1
                 }, 
                 (key, currentData) => {
@@ -292,6 +317,7 @@ public class InternalMain
                         MechKills = ExistingMechKills,
                         Ties = ExistingTies,
                         Victories = ExistingVictories,
+                        Deaths = ExistingDeaths,
                         GamesPlayed = ExistingGamesPlayed
                     };
             });
@@ -351,6 +377,16 @@ public class InternalMain
                 if (FileName.Contains("@") && FileNameExtension.Contains(".lnk")) {
                     IWshShortcut shortcut = (IWshShortcut) shell.CreateShortcut(Path.Combine(DefaultSC2DocumentPath, FileNameExtension));
                     string UserFolder = shortcut.TargetPath;
+                    var UserFolderSplitResult = UserFolder.Split('\\');
+
+                    foreach (var splitResult in UserFolderSplitResult)
+                    {
+                        if (splitResult.Contains("S") && !splitResult.Contains("StarCraft"))
+                        {
+                            UserPlayerHandles.Add(splitResult);
+                        }
+                    }
+
                     var UserReplayFolder = Path.Combine(UserFolder, "Replays");
                     var UserMultiplayerFolder = Path.Combine(UserReplayFolder, "Multiplayer");
 
@@ -387,7 +423,6 @@ public class InternalMain
         }
 
         stopwatch.Stop();
-        ExportImport.ImportAsXml("ReplayData.xml");
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 

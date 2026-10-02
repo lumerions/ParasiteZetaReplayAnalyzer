@@ -12,6 +12,7 @@ public class Models
         public int Victories { get; set; }
 
         public int GamesPlayed { get; set; }
+        public int Deaths { get; set; }
     }
 
     public class IndividualGameResultsDto
