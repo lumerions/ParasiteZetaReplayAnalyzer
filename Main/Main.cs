@@ -13,7 +13,8 @@ namespace Internal.Main;
 
 public class InternalMain
 {
-    private static string[] PlayerIdHandles = new string[16];
+    private static List<Models.Models.IndividualGameResultsDto> GameResults = new List<Models.Models.IndividualGameResultsDto>();
+    private static string[] PlayerIdHandles = new string[12];
     private static int ReplaysAnalyzed = 0;
     private static ConcurrentDictionary<string, Models.Models.FinalResultsDto> FinalResults = new();
     private static readonly string DefaultDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -244,12 +245,21 @@ public class InternalMain
             });
         }
 
-        bool DetermineVictoryCondition ()
+        string DetermineVictoryCondition ()
         {
-            return AliveAlienPlayers.Count > AliveHumanPlayers.Count;
+            if (AliveAlienPlayers.Count > AliveHumanPlayers.Count)
+            {
+                return "Alien";
+            }
+            if (AliveAlienPlayers.Count == AliveHumanPlayers.Count)
+            {
+                return "Tie";
+            }
+
+            return "Human";
         }
 
-        void UpdateWinLoseCount (string PlayerHandle, bool Won)
+        void UpdateWinLoseCount (string PlayerHandle, bool Won, bool? Tie)
         {
             var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed) = GetUserInformation(PlayerHandle);
 
@@ -265,9 +275,14 @@ public class InternalMain
                 }, 
                 (key, currentData) => {
 
-                    if (Won)
+                    if (Won && Tie == null)
                     {
                         ExistingVictories += 1;
+                    }
+
+                    if (Tie != null)
+                    {
+                        ExistingTies += 1;
                     }
 
                     return new Models.Models.FinalResultsDto 
@@ -282,24 +297,33 @@ public class InternalMain
             });
         }
 
-        bool AlienWin = DetermineVictoryCondition();
+        string WhoWon = DetermineVictoryCondition();
+        var AlienWin = WhoWon == "Alien";
 
         foreach (var item in AliveAlienPlayers)
         {
             if (item == null) continue;
-            UpdateWinLoseCount(item, AlienWin);
+            UpdateWinLoseCount(item, AlienWin, WhoWon == "Tie" ? true : null);
         }
 
         foreach (var item in AliveHumanPlayers)
         {
             if (item == null) continue;
-            UpdateWinLoseCount(item, !AlienWin);
+            UpdateWinLoseCount(item, !AlienWin, WhoWon == "Tie" ? true : null);
         }
 
+        var ReplayFileName = replay.FileName;
         var ReplayChatMessageCount = replay.ChatMessages.Count;
         var ReplayLength = replay.Header.ElapsedGameLoops / 22.4;
         TimeSpan TimeSpanSeconds = TimeSpan.FromSeconds(ReplayLength);
         double TimeSpanMinutes = TimeSpanSeconds.Minutes;
+
+        GameResults.Add(new Models.Models.IndividualGameResultsDto
+        {
+            ReplayName = ReplayFileName,
+            ChatMessageCount = ReplayChatMessageCount,
+            ReplayLength = ReplayLength,
+        });
 
         ReplaysAnalyzed += 1;
         return true;

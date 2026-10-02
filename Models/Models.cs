@@ -14,11 +14,18 @@ public class Models
         public int GamesPlayed { get; set; }
     }
 
-    public class GameResultsDto
+    public class IndividualGameResultsDto
     {
         public string ReplayName {get; init;}
-        public string ReplayLength {get; init;}
+        public int ChatMessageCount {get; init;}
+        public double ReplayLength {get; init;}
         public Dictionary<string, string> Players {get; init;}
+    }
+
+    public class CombinedDataResults
+    {
+        public List<IndividualGameResultsDto>? GameResults { get; set; }
+        public FinalResultsDto? FinalResults { get; set; }
     }
 
     public static readonly HashSet<string> AlienUnits = new()

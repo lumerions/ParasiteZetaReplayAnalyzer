@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SC2ReplayParasiteAnalyzer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+71eb5e0f1f9759203e954313f072f364e3c71349")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e8195f51f605554e1fa74c7934d2de710211b75b")]
 [assembly: System.Reflection.AssemblyProductAttribute("SC2ReplayParasiteAnalyzer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SC2ReplayParasiteAnalyzer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
