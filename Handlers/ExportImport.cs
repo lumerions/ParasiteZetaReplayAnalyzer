@@ -17,8 +17,8 @@ public class CombinedResults
 public class ExportImport
 {
     private static readonly string CSVPlayerDataString = "PlayerHandle, PlayerName";
-    private static readonly string CSVGameDataString = "ReplayName, ChatMessageCount, ReplayLength, Players";
-    private static readonly string CSVDataString = "AlienKills, HumanKills, MechKills, Ties, Victories, GamesPlayed";
+    private static readonly string CSVGameDataString = "ReplayName, ChatMessageCount, ReplayLength, WinningAlienUnitType, Players";
+    private static readonly string CSVDataString = "AlienKills, HumanKills, MechKills, Ties, Victories, GamesPlayed, Deaths";
     public static void ExportAsXml (ConcurrentDictionary<string, Models.Models.FinalResultsDto> ResultsData, List<Models.Models.IndividualGameResultsDto> GameResults)
     {
         XmlWriterSettings xmlWriterSettings = new XmlWriterSettings
@@ -43,6 +43,7 @@ public class ExportImport
                 writer.WriteElementString("hk", value.HumanKills.ToString());
                 writer.WriteElementString("mk", value.MechKills.ToString());
                 writer.WriteElementString("t", value.Ties.ToString());
+                writer.WriteElementString("d", value.Deaths.ToString());
                 writer.WriteEndElement();
             }
 
@@ -53,6 +54,7 @@ public class ExportImport
                 writer.WriteElementString("rn", item.ReplayName.ToString());
                 writer.WriteElementString("messagescount", item.ChatMessageCount.ToString());
                 writer.WriteElementString("rl", item.ReplayLength.ToString());
+                writer.WriteElementString("waut", item.WinningAlienUnitType.ToString());
                 writer.WriteStartElement("players");
 
                 foreach (var (key, value) in item.Players)
@@ -104,7 +106,8 @@ public class ExportImport
                 var Ties = item.Value.Ties;
                 var Victories = item.Value.Victories;
                 var GamesPlayed = item.Value.GamesPlayed;
-                CSVData.Add($"{AlienKills},{HumanKills},{MechKills},{Ties},{Victories},{GamesPlayed}");
+                var Deaths = item.Value.Deaths;
+                CSVData.Add($"{AlienKills},{HumanKills},{MechKills},{Ties},{Victories},{GamesPlayed},{Deaths}");
             }
 
             foreach (var item in GameResults)
@@ -112,13 +115,14 @@ public class ExportImport
                 var ReplayLength = item.ReplayLength;
                 var ChatMessageCount = item.ChatMessageCount;
                 var ReplayName = item.ReplayName;
+                var WinningAlienUnitType = item.WinningAlienUnitType;
 
                 if (ReplayName.Contains(","))
                 {
                     ReplayName.Replace(",", "");
                 }
 
-                CSVGameData.Add($"{ReplayName},{ChatMessageCount},{ReplayLength}");
+                CSVGameData.Add($"{ReplayName},{ChatMessageCount},{ReplayLength},{WinningAlienUnitType}");
 
                 foreach (var (key, value) in item.Players)
                 {
@@ -139,7 +143,7 @@ public class ExportImport
         }
     }
 
-    public static Models.Models.CombinedDataResults CreateCombinedObject (List<Models.Models.IndividualGameResultsDto> GameData, int AlienKills, int HumanKills, int MechKills, int Ties, int Victories, int GamesPlayed)
+    public static Models.Models.CombinedDataResults CreateCombinedObject (List<Models.Models.IndividualGameResultsDto> GameData, int AlienKills, int HumanKills, int MechKills, int Ties, int Victories, int GamesPlayed, int DeathCount)
     {
         return new Models.Models.CombinedDataResults {
             FinalResults = new Models.Models.FinalResultsDto
@@ -149,7 +153,8 @@ public class ExportImport
                 MechKills = MechKills,
                 Ties = Ties,
                 Victories = Victories,
-                GamesPlayed = GamesPlayed
+                GamesPlayed = GamesPlayed,
+                Deaths = DeathCount
             },
             GameResults = GameData
         };
@@ -166,6 +171,7 @@ public class ExportImport
         var FinalGamesPlayed = 0;
         var FinalVictoryCount = 0;
         var FinalTieCount = 0;
+        var FinalDeathCount = 0;
 
         try {
             XDocument document = XDocument.Load(XmlFilePath);
@@ -179,8 +185,9 @@ public class ExportImport
                 //var SC2Handle = element.Element("handle")?.Value;
                 var VictoryCount = element.Element("v")?.Value;
                 var TieCount = element.Element("t")?.Value;
+                var DeathCount = element.Element("d")?.Value;
 
-                if (int.TryParse(MechKills, out var MechKillsInt) && int.TryParse(HumanKills, out var HumanKillsInt) && int.TryParse(AlienKills, out var AlienKillsInt) && int.TryParse(GamesPlayed, out var GamesPlayedInt) && int.TryParse(VictoryCount, out var VictoryCountInt) && int.TryParse(TieCount, out var TieCountInt))
+                if (int.TryParse(MechKills, out var MechKillsInt) && int.TryParse(HumanKills, out var HumanKillsInt) && int.TryParse(AlienKills, out var AlienKillsInt) && int.TryParse(GamesPlayed, out var GamesPlayedInt) && int.TryParse(VictoryCount, out var VictoryCountInt) && int.TryParse(TieCount, out var TieCountInt) && int.TryParse(DeathCount, out var DeathCountInt))
                 {
                     FinalTieCount += TieCountInt;
                     FinalVictoryCount += VictoryCountInt;
@@ -188,6 +195,7 @@ public class ExportImport
                     FinalAlienKills += AlienKillsInt;
                     FinalHumanKills += HumanKillsInt;
                     FinalMechKills += MechKillsInt;
+                    FinalDeathCount += DeathCountInt;
                 } 
             }
 
@@ -230,7 +238,7 @@ public class ExportImport
             Console.WriteLine("IO Error");
         }
 
-        return CreateCombinedObject(GameDataList, FinalAlienKills, FinalHumanKills, FinalMechKills, FinalTieCount, FinalVictoryCount, FinalGamesPlayed);
+        return CreateCombinedObject(GameDataList, FinalAlienKills, FinalHumanKills, FinalMechKills, FinalTieCount, FinalVictoryCount, FinalGamesPlayed, FinalDeathCount);
     }
     
     public static Models.Models.CombinedDataResults? ImportAsCsv (string CSVFilePath)

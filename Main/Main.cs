@@ -79,6 +79,7 @@ public class InternalMain
 
     public static async Task<bool> LoadReplay (string LoadReplayPath)
     {
+        var ReplayFileName = Path.GetFileName(LoadReplayPath);
         var options = new ReplayDecoderOptions
         {
             Initdata = true, 
@@ -375,7 +376,6 @@ public class InternalMain
             UpdateWinLoseCount(item, !AlienWin, WhoWon == "Tie" ? true : null);
         }
 
-        var ReplayFileName = replay.FileName;
         var ReplayChatMessageCount = replay.ChatMessages.Count;
         var ReplayLength = replay.Header.ElapsedGameLoops / 22.4;
         TimeSpan TimeSpanSeconds = TimeSpan.FromSeconds(ReplayLength);
@@ -454,15 +454,15 @@ public class InternalMain
         });
 
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
-        var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
+        //var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
-        foreach (var item in MostPlayedWith)
-        {
-            Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
-        }
+       // foreach (var item in MostPlayedWith)
+        //{
+       //     Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
+     //   }
 
         stopwatch.Stop();
-        ExportImport.ExportAsJson(FinalResults, GameResults);
+        ExportImport.ExportAsCsv(FinalResults, GameResults);
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 
