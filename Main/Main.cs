@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -22,7 +23,7 @@ public class InternalMain
     private static readonly WshShell shell = new();
     private static HashSet<string> UserPlayerHandles = new();
 
-    private static Dictionary<string, string> PlayerData = new();
+    private static Dictionary<string, Models.Models.PlayerDataItem> PlayerData = new();
 
     public static (int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths) GetUserInformation (string PlayerHandle)
     {
@@ -118,8 +119,22 @@ public class InternalMain
             var PlayerHandle = GetPlayerHandles(player);
             if (PlayerHandle == "Unknown") continue;
             PlayerIdHandles[player.WorkingSetSlotId] = PlayerHandle;
+            try {
+                PlayerData.Add(ReplayFileName, new Models.Models.PlayerDataItem
+                {
+                    PlayerUsername = player.Name.ToString(),
+                    PlayerHandle = PlayerHandle
+                });
 
-            PlayerData.Add(PlayerHandle, player.Name);
+            } catch (ArgumentException err)
+            {
+                ReplayFileName = RandomNumberGenerator.GetHexString(4) + ReplayFileName;
+                PlayerData.Add(ReplayFileName, new Models.Models.PlayerDataItem
+                {
+                    PlayerUsername = player.Name.ToString(),
+                    PlayerHandle = PlayerHandle
+                });
+            }
 
             var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
@@ -463,6 +478,7 @@ public class InternalMain
 
         stopwatch.Stop();
         ExportImport.ExportAsCsv(FinalResults, GameResults);
+        //ExportImport.ImportAsCsv(@"C:\Users\asdfg\Desktop\ParasiteZetaReplayAnalyzer\bin\Debug\net10.0\UserData\ReplayData.csv");
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 

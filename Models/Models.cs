@@ -21,13 +21,25 @@ public class Models
         public int ChatMessageCount { get; init; }
         public double ReplayLength { get; init; }
         public string? WinningAlienUnitType { get; init; }
-        public Dictionary<string, string> Players { get; init; }
+        public Dictionary<string, PlayerDataItem> Players { get; init; }
     }
 
     public class CombinedDataResults
     {
-        public List<IndividualGameResultsDto>? GameResults { get; set; }
-        public FinalResultsDto? FinalResults { get; set; }
+        public List<IndividualGameResultsDto> GameResults { get; set; }
+        public FinalResultsDto FinalResults { get; set; }
+        public List<PlayersReplayData> PlayerReplayData { get; set; }
+    }
+
+    public class PlayerDataItem
+    {
+        public string PlayerUsername { get; set; }
+        public string PlayerHandle { get; set; }
+    }
+
+    public class PlayersReplayData : PlayerDataItem
+    {
+        public string ReplayName { get; set; }
     }
 
     public static readonly HashSet<string> AlienUnits = new()
