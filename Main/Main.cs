@@ -285,6 +285,21 @@ public class InternalMain
 
         void UpdateWinLoseCount (string PlayerHandle, bool Won, bool? Tie)
         {
+            var QuestionMarkFound = false;
+            StringBuilder sb = new();
+
+            if (PlayerHandle.Contains("?"))
+            {
+                foreach (var character in PlayerHandle)
+                {
+                    if (QuestionMarkFound) continue;
+                    if (character.ToString() == "?") QuestionMarkFound = true;
+                    if (!QuestionMarkFound) sb.Append(character);
+                }
+            }
+
+            PlayerHandle = sb.ToString();
+
             var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
             FinalResults.AddOrUpdate(PlayerHandle, 
@@ -325,12 +340,30 @@ public class InternalMain
 
         string WhoWon = DetermineVictoryCondition();
         var AlienWin = WhoWon == "Alien";
+        var MostUsedAlienForm = new List<string>();
 
         foreach (var item in AliveAlienPlayers)
         {
             if (item == null) continue;
+
+            StringBuilder sb = new();
+
+            var QuestionMarkFound = false;
+
+            if (item.Contains("?"))
+            {
+                foreach (var character in item)
+                {
+                    if (character.ToString() == "?") QuestionMarkFound = true;
+                    if (QuestionMarkFound) sb.Append(character);
+                }
+
+                MostUsedAlienForm.Add(sb.ToString());
+            }
             UpdateWinLoseCount(item, AlienWin, WhoWon == "Tie" ? true : null);
         }
+
+        var LeastUsedAlienForm = MostUsedAlienForm.GroupBy(x => x).MinBy(x => x.Count())?.Key;  // we do this because certain host unit types are different from spawn unit types
 
         foreach (var item in AliveHumanPlayers)
         {
@@ -349,6 +382,7 @@ public class InternalMain
             ReplayName = ReplayFileName,
             ChatMessageCount = ReplayChatMessageCount,
             ReplayLength = ReplayLength,
+            WinningAlienUnitType = LeastUsedAlienForm
         });
 
         ReplaysAnalyzed += 1;
@@ -415,14 +449,15 @@ public class InternalMain
         });
 
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
-        var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
+        //var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
-        foreach (var item in MostPlayedWith)
-        {
-            Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
-        }
+       // foreach (var item in MostPlayedWith)
+        //{
+        //    Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
+      //  }
 
         stopwatch.Stop();
+        GetHighestWinningAlienForm();
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 
@@ -439,5 +474,32 @@ public class InternalMain
         } 
 
         return false;
+    }
+
+    public static void GetHighestKD ()
+    {
+        var HighestKd = FinalResults.OrderByDescending(i => i.Value.Deaths == 0 ? 1 : (decimal) (i.Value.AlienKills + i.Value.HumanKills) / i.Value.Deaths).Select(v => new
+        {
+            Kd = v.Value.Deaths == 0 ? 1 : (decimal) (v.Value.AlienKills + v.Value.HumanKills) / v.Value.Deaths
+        });
+
+        foreach (var item in HighestKd)
+        {
+            Console.WriteLine($"[{item.Kd}]");
+        }
+    }
+
+    public static void GetHighestWinningAlienForm ()
+    {
+        var HighestWinningAlienForms = 
+        GameResults.Where(x => x.WinningAlienUnitType != null)
+        .CountBy(x => x.WinningAlienUnitType)
+        .OrderByDescending(i => i.Value)
+        .ToList();
+
+        foreach (var item in HighestWinningAlienForms)
+        {
+            Console.WriteLine($"[{item.Key}-{item.Value}]");
+        }
     }
 }

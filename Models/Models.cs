@@ -17,10 +17,11 @@ public class Models
 
     public class IndividualGameResultsDto
     {
-        public string ReplayName {get; init;}
-        public int ChatMessageCount {get; init;}
-        public double ReplayLength {get; init;}
-        public Dictionary<string, string> Players {get; init;}
+        public string ReplayName { get; init; }
+        public int ChatMessageCount { get; init; }
+        public double ReplayLength { get; init; }
+        public string? WinningAlienUnitType { get; init; }
+        public Dictionary<string, string> Players { get; init; }
     }
 
     public class CombinedDataResults
