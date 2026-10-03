@@ -14,14 +14,15 @@ namespace Internal.Main;
 public class InternalMain
 {
     private static List<Models.Models.IndividualGameResultsDto> GameResults = new List<Models.Models.IndividualGameResultsDto>();
-    private static string[] PlayerIdHandles = new string[12];
+    private static string[] PlayerIdHandles = new string[14];
     private static int ReplaysAnalyzed = 0;
     private static ConcurrentDictionary<string, Models.Models.FinalResultsDto> FinalResults = new();
     private static readonly string DefaultDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     private static readonly ReplayDecoder decoder = new();
     private static readonly WshShell shell = new();
     private static HashSet<string> UserPlayerHandles = new();
-    private static List<string> MostWinnedWithAlienForms = new();
+
+    private static Dictionary<string, string> PlayerData = new();
 
     public static (int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths) GetUserInformation (string PlayerHandle)
     {
@@ -103,8 +104,9 @@ public class InternalMain
             return false;
         }
 
-        PlayerIdHandles = new string[16];
-    
+        Array.Clear(PlayerIdHandles, 0, PlayerIdHandles.Length);
+        PlayerData.Clear();
+
         foreach (var player in replay.Details.Players)
         {
             if (StationSecurityOrAlien(player.Name))
@@ -115,6 +117,8 @@ public class InternalMain
             var PlayerHandle = GetPlayerHandles(player);
             if (PlayerHandle == "Unknown") continue;
             PlayerIdHandles[player.WorkingSetSlotId] = PlayerHandle;
+
+            PlayerData.Add(PlayerHandle, player.Name);
 
             var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
@@ -382,7 +386,8 @@ public class InternalMain
             ReplayName = ReplayFileName,
             ChatMessageCount = ReplayChatMessageCount,
             ReplayLength = ReplayLength,
-            WinningAlienUnitType = LeastUsedAlienForm
+            WinningAlienUnitType = LeastUsedAlienForm,
+            Players = PlayerData
         });
 
         ReplaysAnalyzed += 1;
@@ -449,15 +454,15 @@ public class InternalMain
         });
 
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
-        //var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
+        var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
-       // foreach (var item in MostPlayedWith)
-        //{
-        //    Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
-      //  }
+        foreach (var item in MostPlayedWith)
+        {
+            Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
+        }
 
         stopwatch.Stop();
-        GetHighestWinningAlienForm();
+        ExportImport.ExportAsJson(FinalResults, GameResults);
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 

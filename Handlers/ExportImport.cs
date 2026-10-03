@@ -8,6 +8,12 @@ using System.Text;
 
 namespace Internal.ExportImporter;
 
+public class CombinedResults
+{
+    public ConcurrentDictionary<string, Models.Models.FinalResultsDto> Players { get; init; }
+    public List<Models.Models.IndividualGameResultsDto> Games { get; init; }
+}
+
 public class ExportImport
 {
     private static readonly string CSVPlayerDataString = "PlayerHandle, PlayerName";
@@ -72,7 +78,7 @@ public class ExportImport
 
         try
         {
-            var combined = new { Players = ResultsData, Games = GameResults };
+            var combined = new CombinedResults { Players = ResultsData, Games = GameResults };
             string Json = JsonSerializer.Serialize(combined, JsonWriteOptions);
             var JsonFilePath = Path.Combine(AppContext.BaseDirectory, "UserData", "ReplayData.json");
             File.WriteAllText(JsonFilePath, Json);
@@ -262,5 +268,21 @@ public class ExportImport
         }
 
         return null;
+    }
+
+    public static CombinedResults? ImportAsJson (string JsonFilePath)
+    {
+        if (Path.GetExtension(JsonFilePath) != ".json") return null;
+
+        var JsonData = File.ReadAllText(JsonFilePath);
+        try
+        {
+            var Data = JsonSerializer.Deserialize<CombinedResults>(JsonData);
+            return Data;
+        } catch (Exception err)
+        {
+            Console.WriteLine(err);
+            return null;
+        }
     }
 }
