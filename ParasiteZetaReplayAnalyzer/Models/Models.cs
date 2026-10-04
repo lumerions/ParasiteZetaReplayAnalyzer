@@ -1,7 +1,16 @@
+using System.Collections.Concurrent;
+
 namespace Internal.Models;
 
 public class Models
 {
+
+    public class CombinedResults
+    {
+        public ConcurrentDictionary<string, FinalResultsDto> Players { get; init; }
+        public List<IndividualGameResultsDto> Games { get; init; }
+    }
+
     public class FinalResultsDto
     {
         public int AlienKills { get; set; }
@@ -21,7 +30,7 @@ public class Models
         public int ChatMessageCount { get; init; }
         public double ReplayLength { get; init; }
         public string? WinningAlienUnitType { get; init; }
-        public Dictionary<string, PlayerDataItem> Players { get; init; }
+        public Dictionary<string, PlayersReplayData> Players { get; init; }
     }
 
     public class CombinedDataResults

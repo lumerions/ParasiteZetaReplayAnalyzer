@@ -1,5 +1,4 @@
 using System;
-using System.Security.Cryptography;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -9,10 +8,11 @@ using IWshRuntimeLibrary;
 using System.Collections.Concurrent;
 using Internal.Models;
 using Internal.ExportImporter;
+using Internal.OtherMethods;
 
 namespace Internal.Main;
 
-public class InternalMain
+public class InternalMain : Other
 {
     private static List<Models.Models.IndividualGameResultsDto> GameResults = new List<Models.Models.IndividualGameResultsDto>();
     private static string[] PlayerIdHandles = new string[14];
@@ -21,9 +21,41 @@ public class InternalMain
     private static readonly string DefaultDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     private static readonly ReplayDecoder decoder = new();
     private static readonly WshShell shell = new();
-    private static HashSet<string> UserPlayerHandles = new();
 
-    private static Dictionary<string, Models.Models.PlayerDataItem> PlayerData = new();
+    private static Dictionary<string, Models.Models.PlayersReplayData> PlayerData = new();
+
+    public static void UpdateStatData (string PlayerHandle, bool IncrementGamesPlayed, int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths)
+    {
+        if (IncrementGamesPlayed)
+        {
+            ExistingGamesPlayed += 1;
+        }
+        
+        FinalResults.AddOrUpdate(PlayerHandle,
+        new Models.Models.FinalResultsDto
+        {
+            AlienKills = ExistingAlienKills,
+            HumanKills = ExistingHumanKills,
+            MechKills = ExistingMechKills,
+            Ties = ExistingTies,
+            Victories = ExistingVictories,
+            Deaths = ExistingDeaths,
+            GamesPlayed = ExistingGamesPlayed
+        }, 
+        (key, currentData) => {
+
+            return new Models.Models.FinalResultsDto 
+            {
+                AlienKills = ExistingAlienKills,
+                HumanKills = ExistingHumanKills,
+                MechKills = ExistingMechKills,
+                Ties = ExistingTies,
+                Victories = ExistingVictories,
+                Deaths = ExistingDeaths,
+                GamesPlayed = ExistingGamesPlayed
+            };
+        });
+    }
 
     public static (int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths) GetUserInformation (string PlayerHandle)
     {
@@ -47,26 +79,6 @@ public class InternalMain
         }
 
         return (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths);
-    }
-
-    public static bool IsAlienUnit (string PlayerUnitTypeWhoDied)
-    {            
-        if (Models.Models.AlienUnits.Contains(PlayerUnitTypeWhoDied)) {
-            return true;
-        } else
-        {
-            return false;
-        }
-    }
-
-    public static bool IsMechUnit (string PlayerUnitTypeWhoDied)
-    {            
-        if (Models.Models.MechUnits.Contains(PlayerUnitTypeWhoDied)) {
-            return true;
-        } else
-        {
-            return false;
-        }
     }
 
     public static string GetPlayerHandles (DetailsPlayer detailsPlayer)
@@ -119,49 +131,12 @@ public class InternalMain
             var PlayerHandle = GetPlayerHandles(player);
             if (PlayerHandle == "Unknown") continue;
             PlayerIdHandles[player.WorkingSetSlotId] = PlayerHandle;
-            try {
-                PlayerData.Add(ReplayFileName, new Models.Models.PlayerDataItem
-                {
-                    PlayerUsername = player.Name.ToString(),
-                    PlayerHandle = PlayerHandle
-                });
-
-            } catch (ArgumentException err)
-            {
-                ReplayFileName = RandomNumberGenerator.GetHexString(4) + ReplayFileName;
-                PlayerData.Add(ReplayFileName, new Models.Models.PlayerDataItem
-                {
-                    PlayerUsername = player.Name.ToString(),
-                    PlayerHandle = PlayerHandle
-                });
-            }
+            
+            AddToPlayerData(PlayerData, player.Name, PlayerHandle, ReplayFileName);            
 
             var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
 
-            FinalResults.AddOrUpdate(PlayerHandle,
-            new Models.Models.FinalResultsDto
-            {
-                AlienKills = ExistingAlienKills,
-                HumanKills = ExistingHumanKills,
-                MechKills = ExistingMechKills,
-                Ties = ExistingTies,
-                Victories = ExistingVictories,
-                Deaths = ExistingDeaths,
-                GamesPlayed = 1
-            }, 
-            (key, currentData) => {
-
-                return new Models.Models.FinalResultsDto 
-                {
-                    AlienKills = ExistingAlienKills,
-                    HumanKills = ExistingHumanKills,
-                    MechKills = ExistingMechKills,
-                    Ties = ExistingTies,
-                    Victories = ExistingVictories,
-                    Deaths = ExistingDeaths,
-                    GamesPlayed = ExistingGamesPlayed + 1
-                };
-            });
+            UpdateStatData(PlayerHandle, true, ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths);
         }
 
         var AliveAlienPlayers = new HashSet<string>();
@@ -469,12 +444,15 @@ public class InternalMain
         });
 
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
-        //var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
+        var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
-       // foreach (var item in MostPlayedWith)
-        //{
-       //     Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
-     //   }
+        foreach (var item in MostPlayedWith)
+        {
+            if (UserPlayerHandles.Contains(item.Key))
+            {
+                Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
+            }
+        }
 
         stopwatch.Stop();
         //ExportImport.ImportAsCsv(@"C:\Users\asdfg\Desktop\ParasiteZetaReplayAnalyzer\bin\Debug\net10.0\UserData\ReplayData.csv");
@@ -484,16 +462,6 @@ public class InternalMain
     public static string GetHandlesByPlayerId (int PlayerId)
     {
         return PlayerIdHandles[PlayerId];
-    }
-    
-    public static bool StationSecurityOrAlien (string PlayerName)
-    {
-        if (PlayerName == "Station Security" || PlayerName == "Alien")
-        {
-            return true;
-        } 
-
-        return false;
     }
 
     public static void GetHighestKD ()
@@ -509,21 +477,19 @@ public class InternalMain
         }
     }
 
-    public static void GetHighestWinningAlienForm ()
+    public static List<string> GetHighestWinningAlienForm ()
     {
         var HighestWinningAlienForms = 
         GameResults.Where(x => x.WinningAlienUnitType != null)
         .CountBy(x => x.WinningAlienUnitType)
         .OrderByDescending(i => i.Value)
+        .Select(x => x.Key)
         .ToList();
 
-        foreach (var item in HighestWinningAlienForms)
-        {
-            Console.WriteLine($"[{item.Key}-{item.Value}]");
-        }
+        return HighestWinningAlienForms;
     }
 
-    public static Models.Models.CombinedDataResults GetLoadedReplayData () 
+    public static Models.Models.CombinedDataResults GetLoadedReplayData (bool ImportedOnce) 
     {
         var FinalMechKills = 0;
         var FinalAlienKills = 0; 
@@ -543,7 +509,9 @@ public class InternalMain
             FinalVictoryCount += ResultVictoryCount;
             FinalGamesPlayed += ResultGamesPlayed;
             FinalDeathCount += ResultDeathCount;
+            Console.WriteLine($"[Read] {PlayerHandle} -> GP {ResultGamesPlayed} (ImportedOnce={ImportedOnce})");
         }
+
 
         return new Models.Models.CombinedDataResults 
         {
@@ -559,5 +527,20 @@ public class InternalMain
             GameResults = GameResults,
             PlayerReplayData = new()
         };
+    }
+
+    public static void UpdateLocalDataMainCSV (Dictionary<string, Models.Models.FinalResultsDto> stats)
+    {
+        foreach (var (handle, dto) in stats)
+            FinalResults[handle] = dto;   
+    }
+
+    public static void UpdateLocalDataMain (Models.Models.CombinedDataResults CombinedData)
+    {
+        foreach (var PlayerHandle in UserPlayerHandles)
+        {
+            Console.WriteLine($"[Main] {PlayerHandle} <- GP {CombinedData.FinalResults.GamesPlayed}");
+            UpdateStatData(PlayerHandle, false, CombinedData.FinalResults.MechKills, CombinedData.FinalResults.AlienKills, CombinedData.FinalResults.HumanKills, CombinedData.FinalResults.Ties, CombinedData.FinalResults.Victories, CombinedData.FinalResults.GamesPlayed, CombinedData.FinalResults.Deaths);
+        }
     }
 }

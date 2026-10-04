@@ -6,27 +6,76 @@
         xmlns:local="clr-namespace:ParasiteZetaAnalyzer"
         mc:Ignorable="d"
         Icon="/Image/parasiteloadpic.png"
-        Title="ParasiteReplayAnalyzer" Height="450" Width="800">
+        Title="ParasiteReplayAnalyzer"
+        Height="450"
+        Width="800">
+
     <Grid>
-        <StackPanel>
-            <Image Source="/Image/parasiteloadpic.png"/>
-        </StackPanel>
-        <Menu Grid.Column="1" Margin="1" VerticalAlignment="Top">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="250"/>
+        </Grid.ColumnDefinitions>
+
+        <Menu Grid.Row="0"
+              Grid.Column="0"
+              Grid.ColumnSpan="2">
+
             <MenuItem Header="Actions">
-                <MenuItem Header="Best Alien Forms"/>
+                <MenuItem Header="Best Alien Forms"
+                          Click="BestAlienForms_Click"/>
+                <MenuItem Header="Player Stats"
+                          Click="PlayerStats_Click"/>
             </MenuItem>
+
             <MenuItem Header="Export/Import">
-                <MenuItem Header="Export JSON" Click="ExportJson_Click"/>
-                <MenuItem Header="Export CSV"  Click="ExportCsv_Click"/>
-                <MenuItem Header="Export XML"  Click="ExportXml_Click"/>
+                <MenuItem Header="Export JSON"
+                          Click="ExportJson_Click"/>
+                <MenuItem Header="Export CSV"
+                          Click="ExportCsv_Click"/>
+                <MenuItem Header="Export XML"
+                          Click="ExportXml_Click"/>
                 <Separator/>
-                <MenuItem Header="Import JSON" Click="ImportJson_Click"/>
-                <MenuItem Header="Import CSV"  Click="ImportCsv_Click"/>
-                <MenuItem Header="Import XML"  Click="ImportXml_Click"/>
+
+                <MenuItem Header="Import JSON"
+                          Click="ImportJson_Click"/>
+
+                <MenuItem Header="Import CSV"
+                          Click="ImportCsv_Click"/>
+
+                <MenuItem Header="Import XML"
+                          Click="ImportXml_Click"/>
             </MenuItem>
+
             <MenuItem Header="Other">
-                <MenuItem Header="Discord" Click="Discord_Click"/>
+                <MenuItem Header="Discord"
+                          Click="Discord_Click"/>
             </MenuItem>
         </Menu>
+        <Grid Grid.Row="1"
+              Grid.Column="0">
+
+            <Image Source="/Image/parasiteloadpic.png"
+                   Stretch="Fill"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+
+        </Grid>
+        <TextBox x:Name="OutputBox"
+                 Grid.Row="1"
+                 Grid.Column="1"
+                 Margin="5"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Disabled"
+                 AcceptsReturn="True"
+                 VerticalContentAlignment="Top"/>
     </Grid>
 </Window>
+
