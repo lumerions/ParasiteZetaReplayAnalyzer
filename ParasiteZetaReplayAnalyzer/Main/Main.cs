@@ -91,8 +91,8 @@ public class InternalMain
             MessageEvents = true, 
             AttributeEvents = false 
         };
-        await using FileStream stream = System.IO.File.OpenRead(LoadReplayPath);
-        Sc2Replay? replay = await decoder.DecodeAsync(stream, options);
+        
+        Sc2Replay? replay = await decoder.DecodeAsync(LoadReplayPath, options);
 
         if (replay == null)
         {
@@ -477,7 +477,6 @@ public class InternalMain
      //   }
 
         stopwatch.Stop();
-        ExportImport.ExportAsCsv(FinalResults, GameResults);
         //ExportImport.ImportAsCsv(@"C:\Users\asdfg\Desktop\ParasiteZetaReplayAnalyzer\bin\Debug\net10.0\UserData\ReplayData.csv");
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
@@ -522,5 +521,43 @@ public class InternalMain
         {
             Console.WriteLine($"[{item.Key}-{item.Value}]");
         }
+    }
+
+    public static Models.Models.CombinedDataResults GetLoadedReplayData () 
+    {
+        var FinalMechKills = 0;
+        var FinalAlienKills = 0; 
+        var FinalHumanKills = 0; 
+        var FinalTieCount = 0; 
+        var FinalVictoryCount = 0; 
+        var FinalGamesPlayed = 0; 
+        var FinalDeathCount = 0;
+
+        foreach (var PlayerHandle in UserPlayerHandles)
+        {
+            var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(PlayerHandle);
+            FinalMechKills += ResultMechKills;
+            FinalAlienKills += ResultAlienKills;
+            FinalHumanKills += ResultHumanKills;
+            FinalTieCount += ResultTieCount;
+            FinalVictoryCount += ResultVictoryCount;
+            FinalGamesPlayed += ResultGamesPlayed;
+            FinalDeathCount += ResultDeathCount;
+        }
+
+        return new Models.Models.CombinedDataResults 
+        {
+            FinalResults = new Models.Models.FinalResultsDto {
+                AlienKills = FinalAlienKills,
+                HumanKills = FinalHumanKills,
+                MechKills = FinalMechKills,
+                Ties = FinalTieCount,
+                Victories = FinalVictoryCount,
+                Deaths = FinalDeathCount,
+                GamesPlayed = FinalGamesPlayed
+            },
+            GameResults = GameResults,
+            PlayerReplayData = new()
+        };
     }
 }

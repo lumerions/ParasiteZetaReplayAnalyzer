@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36212.18
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ParasiteZetaAnalyzer", "ParasiteZetaAnalyzer\ParasiteZetaAnalyzer.csproj", "{C54BB0BE-7468-4B99-924B-166862CC45EB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParasiteZetaReplayAnalyzer", "ParasiteZetaReplayAnalyzer", "{5D177161-36C0-4BFA-3DCA-DC1F1CD5DCAC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SC2ReplayParasiteAnalyzer", "ParasiteZetaReplayAnalyzer\SC2ReplayParasiteAnalyzer.csproj", "{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Debug|x86.Build.0 = Debug|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Release|x64.ActiveCfg = Release|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Release|x64.Build.0 = Release|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Release|x86.ActiveCfg = Release|Any CPU
+		{C54BB0BE-7468-4B99-924B-166862CC45EB}.Release|x86.Build.0 = Release|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Debug|x64.Build.0 = Debug|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Debug|x86.Build.0 = Debug|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Release|x64.ActiveCfg = Release|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Release|x64.Build.0 = Release|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Release|x86.ActiveCfg = Release|Any CPU
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F9FED64B-CADC-4FE0-ADA9-C0405A251B7A} = {5D177161-36C0-4BFA-3DCA-DC1F1CD5DCAC}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D57982D5-091B-47A8-B5EB-E750C02AE6D2}
+	EndGlobalSection
+EndGlobal

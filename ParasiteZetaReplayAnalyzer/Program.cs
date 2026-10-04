@@ -1,6 +1,8 @@
 ﻿using System;
 using Internal.Main;
 
+namespace Internal.Start;
+
 public class Program
 {    
     public static async Task Main (string[] args)

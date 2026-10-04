@@ -315,7 +315,7 @@ public class ExportImport
 
             return new Models.Models.CombinedDataResults 
             {
-                FinalResults = {
+                FinalResults = new Models.Models.FinalResultsDto {
                     AlienKills = FinalAlienKills,
                     HumanKills = FinalHumanKills,
                     MechKills = FinalMechKills,

@@ -1,0 +1,32 @@
+﻿<Window x:Class="ParasiteZetaAnalyzer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ParasiteZetaAnalyzer"
+        mc:Ignorable="d"
+        Icon="/Image/parasiteloadpic.png"
+        Title="ParasiteReplayAnalyzer" Height="450" Width="800">
+    <Grid>
+        <StackPanel>
+            <Image Source="/Image/parasiteloadpic.png"/>
+        </StackPanel>
+        <Menu Grid.Column="1" Margin="1" VerticalAlignment="Top">
+            <MenuItem Header="Actions">
+                <MenuItem Header="Best Alien Forms"/>
+            </MenuItem>
+            <MenuItem Header="Export/Import">
+                <MenuItem Header="Export JSON" Click="ExportJson_Click"/>
+                <MenuItem Header="Export CSV"  Click="ExportCsv_Click"/>
+                <MenuItem Header="Export XML"  Click="ExportXml_Click"/>
+                <Separator/>
+                <MenuItem Header="Import JSON" Click="ImportJson_Click"/>
+                <MenuItem Header="Import CSV"  Click="ImportCsv_Click"/>
+                <MenuItem Header="Import XML"  Click="ImportXml_Click"/>
+            </MenuItem>
+            <MenuItem Header="Other">
+                <MenuItem Header="Discord" Click="Discord_Click"/>
+            </MenuItem>
+        </Menu>
+    </Grid>
+</Window>
