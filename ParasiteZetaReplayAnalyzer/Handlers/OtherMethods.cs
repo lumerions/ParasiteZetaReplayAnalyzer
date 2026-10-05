@@ -5,6 +5,8 @@ namespace Internal.OtherMethods;
 
 public class Other
 {
+    public static string ExportSC2Handle; // why the fuck do we do it this way? its because multiple handles can exist 
+    // for 1 application user and this can cause issues like inflated stat values so we select one of the users random handles and just use that for everything in terms of loading
     private static Dictionary<string, Models.Models.FinalResultsDto> PendingPlayerStats = new();
     public static HashSet<string> UserPlayerHandles = new();
     private static Models.Models.FinalResultsDto FinalResults = new();
@@ -59,17 +61,6 @@ public class Other
         }
     }
 
-    public static void UpdateLocalData (Models.Models.CombinedDataResults CombinedData)
-    {
-        Main.InternalMain.UpdateLocalDataMain(CombinedData);
-    }
-
-
-    public static void UpdateLocalDataCSV (Dictionary<string, Models.Models.FinalResultsDto> stats)
-    {
-        Main.InternalMain.UpdateLocalDataMainCSV(stats);
-    }
-
     public static void UpdateLocalDataViaCsvImport (Models.Models.CombinedDataResults Combined,  Dictionary<string, Models.Models.FinalResultsDto> PlayerStats)
     {
         var FileType = 0;
@@ -105,18 +96,73 @@ public class Other
                 })
             }).ToList();
 
-            CombinedData.GameResults = NewGameResults;
-
             if (PendingPlayerStats.Count > 0)
-            {
-                UpdateLocalDataCSV(PendingPlayerStats);
+            {                        
+                PendingPlayerStats.TryGetValue(GetAvailableHandleOrDefault(), out var PlayerObjectFind);
+                var CombinedObject = CreateCombinedObject(NewGameResults, PlayerObjectFind.AlienKills, PlayerObjectFind.HumanKills, PlayerObjectFind.MechKills, PlayerObjectFind.Ties, PlayerObjectFind.Victories, PlayerObjectFind.GamesPlayed, PlayerObjectFind.Deaths);
+                var ChangeDataDict = new Dictionary<string, Models.Models.FinalResultsDto> { { GetAvailableHandleOrDefault(), PlayerObjectFind } };
+                UpdateLocalDataInternalMainUpdate(ChangeDataDict);
                 PendingPlayerStats = new();
             }
         }
     }
 
+    public static void UpdateLocalDataInternalMainUpdate (Dictionary<string, Models.Models.FinalResultsDto> ToChange)
+    {
+        foreach (var (key, value) in ToChange) {
+            ExportSC2Handle = key;
+        }
+        Main.InternalMain.UpdateLocalDataInternalMain(ToChange);
+    }
+
+    public static string GetAvailableHandleOrDefault ()
+    {
+        if (ExportSC2Handle != null)
+        {
+            return ExportSC2Handle;
+        }
+
+        var Skipped = false;
+
+        foreach (var handle in GetApplicationUserHandles())
+        {
+            if (RandomNumberGenerator.GetInt32(1, 3) == 2)
+            {
+                Skipped = true;
+                continue;
+            }
+
+            if (Skipped)
+            {
+                return handle;
+            }
+
+            return handle;
+        }
+
+        return "";
+    }
+
     public static HashSet<string> GetApplicationUserHandles ()
     {
         return UserPlayerHandles;
+    }
+
+    public static Models.Models.CombinedDataResults CreateCombinedObject (List<Models.Models.IndividualGameResultsDto> GameData, int AlienKills, int HumanKills, int MechKills, int Ties, int Victories, int GamesPlayed, int DeathCount)
+    {
+        return new Models.Models.CombinedDataResults {
+            FinalResults = new Models.Models.FinalResultsDto
+            {
+                AlienKills = AlienKills,
+                HumanKills = HumanKills,
+                MechKills = MechKills,
+                Ties = Ties,
+                Victories = Victories,
+                GamesPlayed = GamesPlayed,
+                Deaths = DeathCount
+            },
+            GameResults = GameData,
+            PlayerReplayData = new()
+        };
     }
 }

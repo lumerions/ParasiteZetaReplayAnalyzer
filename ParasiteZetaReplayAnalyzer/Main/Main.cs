@@ -498,21 +498,24 @@ public class InternalMain : Other
         var FinalVictoryCount = 0; 
         var FinalGamesPlayed = 0; 
         var FinalDeathCount = 0;
+        string s = "";
 
-        foreach (var PlayerHandle in UserPlayerHandles)
+        foreach (var playerhand in UserPlayerHandles)
         {
-            var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(PlayerHandle);
-            FinalMechKills += ResultMechKills;
-            FinalAlienKills += ResultAlienKills;
-            FinalHumanKills += ResultHumanKills;
-            FinalTieCount += ResultTieCount;
-            FinalVictoryCount += ResultVictoryCount;
-            FinalGamesPlayed += ResultGamesPlayed;
-            FinalDeathCount += ResultDeathCount;
-            Console.WriteLine($"[Read] {PlayerHandle} -> GP {ResultGamesPlayed} (ImportedOnce={ImportedOnce})");
+            s = playerhand;
         }
 
-
+        var hand = ExportSC2Handle == null ? s : ExportSC2Handle;
+        var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(hand);
+        FinalMechKills += ResultMechKills;
+        FinalAlienKills += ResultAlienKills;
+        FinalHumanKills += ResultHumanKills;
+        FinalTieCount += ResultTieCount;
+        FinalVictoryCount += ResultVictoryCount;
+        FinalGamesPlayed += ResultGamesPlayed;
+        FinalDeathCount += ResultDeathCount;
+        Console.WriteLine($"[Read] {hand} -> GP {ResultGamesPlayed} (ImportedOnce={ImportedOnce})");
+    
         return new Models.Models.CombinedDataResults 
         {
             FinalResults = new Models.Models.FinalResultsDto {
@@ -529,18 +532,11 @@ public class InternalMain : Other
         };
     }
 
-    public static void UpdateLocalDataMainCSV (Dictionary<string, Models.Models.FinalResultsDto> stats)
+    public static void UpdateLocalDataInternalMain (Dictionary<string, Models.Models.FinalResultsDto> ToChange)
     {
-        foreach (var (handle, dto) in stats)
-            FinalResults[handle] = dto;   
-    }
-
-    public static void UpdateLocalDataMain (Models.Models.CombinedDataResults CombinedData)
-    {
-        foreach (var PlayerHandle in UserPlayerHandles)
+        foreach (var (key, dto) in ToChange)
         {
-            Console.WriteLine($"[Main] {PlayerHandle} <- GP {CombinedData.FinalResults.GamesPlayed}");
-            UpdateStatData(PlayerHandle, false, CombinedData.FinalResults.MechKills, CombinedData.FinalResults.AlienKills, CombinedData.FinalResults.HumanKills, CombinedData.FinalResults.Ties, CombinedData.FinalResults.Victories, CombinedData.FinalResults.GamesPlayed, CombinedData.FinalResults.Deaths);
+            FinalResults[key] = dto;
         }
     }
 }

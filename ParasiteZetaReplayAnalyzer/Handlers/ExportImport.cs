@@ -23,6 +23,7 @@ public class ExportImport
         };
 
         var ReplayDataXMLPath = Path.Combine(AppContext.BaseDirectory, "UserData", "ReplayData.xml");
+        var ApplicationUserExportedAlready = false;
 
         using (XmlWriter writer = XmlWriter.Create(ReplayDataXMLPath, xmlWriterSettings))
         {
@@ -30,16 +31,23 @@ public class ExportImport
             writer.WriteStartElement("data");
 
             foreach (var (key, value) in ResultsData) {
-                writer.WriteStartElement("pd");
-                writer.WriteElementString("handle", key);
-                writer.WriteElementString("gp", value.GamesPlayed.ToString());
-                writer.WriteElementString("v", value.Victories.ToString());
-                writer.WriteElementString("ak", value.AlienKills.ToString());
-                writer.WriteElementString("hk", value.HumanKills.ToString());
-                writer.WriteElementString("mk", value.MechKills.ToString());
-                writer.WriteElementString("t", value.Ties.ToString());
-                writer.WriteElementString("d", value.Deaths.ToString());
-                writer.WriteEndElement();
+                if (ApplicationUserExportedAlready == false)
+                {
+                    writer.WriteStartElement("pd");
+                    writer.WriteElementString("handle", key);
+                    writer.WriteElementString("gp", value.GamesPlayed.ToString());
+                    writer.WriteElementString("v", value.Victories.ToString());
+                    writer.WriteElementString("ak", value.AlienKills.ToString());
+                    writer.WriteElementString("hk", value.HumanKills.ToString());
+                    writer.WriteElementString("mk", value.MechKills.ToString());
+                    writer.WriteElementString("t", value.Ties.ToString());
+                    writer.WriteElementString("d", value.Deaths.ToString());
+                    writer.WriteEndElement();
+                }
+                if (OtherMethods.Other.GetApplicationUserHandles().Contains(key) && ApplicationUserExportedAlready == false)
+                {
+                    ApplicationUserExportedAlready = true;
+                }
             }
 
             writer.WriteStartElement("gd");
@@ -140,23 +148,6 @@ public class ExportImport
         }
     }
 
-    public static Models.Models.CombinedDataResults CreateCombinedObject (List<Models.Models.IndividualGameResultsDto> GameData, int AlienKills, int HumanKills, int MechKills, int Ties, int Victories, int GamesPlayed, int DeathCount)
-    {
-        return new Models.Models.CombinedDataResults {
-            FinalResults = new Models.Models.FinalResultsDto
-            {
-                AlienKills = AlienKills,
-                HumanKills = HumanKills,
-                MechKills = MechKills,
-                Ties = Ties,
-                Victories = Victories,
-                GamesPlayed = GamesPlayed,
-                Deaths = DeathCount
-            },
-            GameResults = GameData,
-            PlayerReplayData = new()
-        };
-    }
 
     public static Models.Models.CombinedDataResults ImportAsXml (string XmlFilePath)
     {
@@ -170,6 +161,7 @@ public class ExportImport
         var FinalVictoryCount = 0;
         var FinalTieCount = 0;
         var FinalDeathCount = 0;
+        var SC2Handle = "";
 
         try {
             XDocument document = XDocument.Load(XmlFilePath);
@@ -180,10 +172,14 @@ public class ExportImport
                 var HumanKills = element.Element("hk")?.Value;
                 var AlienKills = element.Element("ak")?.Value;
                 var GamesPlayed = element.Element("gp")?.Value;
-                var SC2Handle = element.Element("handle")?.Value;
                 var VictoryCount = element.Element("v")?.Value;
                 var TieCount = element.Element("t")?.Value;
                 var DeathCount = element.Element("d")?.Value;
+
+                if (element.Element("handle")?.Value != null)
+                {
+                    SC2Handle = element.Element("handle")?.Value;
+                }
 
                 if (int.TryParse(MechKills, out var MechKillsInt) && int.TryParse(HumanKills, out var HumanKillsInt) && int.TryParse(AlienKills, out var AlienKillsInt) && int.TryParse(GamesPlayed, out var GamesPlayedInt) && int.TryParse(VictoryCount, out var VictoryCountInt) && int.TryParse(TieCount, out var TieCountInt) && int.TryParse(DeathCount, out var DeathCountInt))
                 {
@@ -238,8 +234,10 @@ public class ExportImport
             Console.WriteLine("IO Error");
         }
 
-        var CombinedObject = CreateCombinedObject(GameDataList, FinalAlienKills, FinalHumanKills, FinalMechKills, FinalTieCount, FinalVictoryCount, FinalGamesPlayed, FinalDeathCount);
-        OtherMethods.Other.UpdateLocalData(CombinedObject);
+        var CombinedObject = OtherMethods.Other.CreateCombinedObject(GameDataList, FinalAlienKills, FinalHumanKills, FinalMechKills, FinalTieCount, FinalVictoryCount, FinalGamesPlayed, FinalDeathCount);
+        var ChangeDataDict = new Dictionary<string, Models.Models.FinalResultsDto> { { OtherMethods.Other.GetAvailableHandleOrDefault(), CombinedObject.FinalResults } };
+    
+        OtherMethods.Other.UpdateLocalDataInternalMainUpdate(ChangeDataDict);
         return CombinedObject;
     }
     
@@ -318,12 +316,16 @@ public class ExportImport
                 });
             }
 
-            return new Models.Models.CombinedDataResults 
+            var CombinedObject = new Models.Models.CombinedDataResults 
             {
                 FinalResults = new(),
                 GameResults = GameResults,
                 PlayerReplayData = new()
             };
+
+            Other.UpdateLocalDataViaCsvImport(CombinedObject, new Dictionary<string, Models.Models.FinalResultsDto>());
+
+            return CombinedObject;
         } else if (CSVLines[0].StartsWith("PlayerHandle"))
         {
             var PlayerReplayGameData = new List<Models.Models.PlayersReplayData>();
@@ -343,12 +345,16 @@ public class ExportImport
                 });
             }
 
-            return new Models.Models.CombinedDataResults 
+            var CombinedObject = new Models.Models.CombinedDataResults 
             {
                 FinalResults = new(),
                 GameResults = new(),
                 PlayerReplayData = PlayerReplayGameData
             };
+
+            Other.UpdateLocalDataViaCsvImport(CombinedObject, new Dictionary<string, Models.Models.FinalResultsDto>());
+            
+            return CombinedObject;
         }
 
         return new Models.Models.CombinedDataResults {GameResults = new(), FinalResults = new(), PlayerReplayData = new()};
@@ -402,7 +408,7 @@ public class ExportImport
                 FinalDeathCount = stat.Value.Deaths;
             }
 
-            var Combined = new Models.Models.CombinedDataResults {
+            var CombinedObject = new Models.Models.CombinedDataResults {
                 GameResults = GameResults, 
                 FinalResults = new Models.Models.FinalResultsDto {
                     AlienKills = FinalAlienKills,
@@ -416,8 +422,9 @@ public class ExportImport
                 PlayerReplayData = new()
             };
 
-            OtherMethods.Other.UpdateLocalData(Combined);
-            return Combined;
+            var ChangeDataDict = new Dictionary<string, Models.Models.FinalResultsDto> { { OtherMethods.Other.GetAvailableHandleOrDefault(), CombinedObject.FinalResults } };
+            OtherMethods.Other.UpdateLocalDataInternalMainUpdate(ChangeDataDict);
+            return CombinedObject;
         } catch (Exception err)
         {
             Console.WriteLine(err);
