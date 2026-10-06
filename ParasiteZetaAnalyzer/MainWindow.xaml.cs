@@ -12,6 +12,7 @@ using Internal.ExportImporter;
 using Internal.Models;
 using Internal.Main;
 using Internal.Start;
+using Internal.Calc;
 using System.Collections.Concurrent;
 using Microsoft.Win32;
 
@@ -23,16 +24,16 @@ namespace ParasiteZetaAnalyzer
     public partial class MainWindow : Window
     {
         private Models.CombinedDataResults CombinedResults;
-        private bool ImportedOnce = false;
         public MainWindow()
         {
-            Program.Main(Array.Empty<string>());
+            MessageBox.Show("It may take a while to load your data.");
             InitializeComponent();
+            Program.Main(Array.Empty<string>());
         }
 
         private ConcurrentDictionary<string, Models.FinalResultsDto> SetUpData ()
         {
-            CombinedResults = InternalMain.GetLoadedReplayData(ImportedOnce);
+            CombinedResults = InternalMain.GetLoadedReplayData();
             var ResultData = new ConcurrentDictionary<string, Models.FinalResultsDto>();
             var HashSetHandles = InternalMain.GetApplicationUserHandles();
             foreach (var handle in HashSetHandles)
@@ -72,7 +73,6 @@ namespace ParasiteZetaAnalyzer
             {
                 string FilePath = dialog.FileName;
                 CombinedResults = ExportImport.ImportAsJson(FilePath);
-                ImportedOnce = true;
                 MessageBox.Show("Successfully imported json, copied path location has been copied to clipboard.");
             }
         }
@@ -86,7 +86,6 @@ namespace ParasiteZetaAnalyzer
             {
                 string FilePath = dialog.FileName;
                 CombinedResults = ExportImport.ImportAsCsv(FilePath);
-                ImportedOnce = true;
                 MessageBox.Show("Successfully imported csv, copied path location has been copied to clipboard.");
             }
         }
@@ -100,7 +99,6 @@ namespace ParasiteZetaAnalyzer
             {
                 string FilePath = dialog.FileName;
                 CombinedResults = ExportImport.ImportAsXml(FilePath);
-                ImportedOnce = true;
                 MessageBox.Show("Successfully imported xml, copied path location has been copied to clipboard.");
             }
         }
@@ -114,16 +112,18 @@ namespace ParasiteZetaAnalyzer
         private void BestAlienForms_Click (object sender, RoutedEventArgs a)
         {
             OutputBox.Clear();
-            var WinningAlienForms = InternalMain.GetHighestWinningAlienForm();
+            var ItemCount = 0;
+            var WinningAlienForms = DataCalculator.GetHighestWinningAlienForm(CombinedResults.GameResults);
             foreach (var key in WinningAlienForms)
             {
-                OutputBox.AppendText("best alien forms " + key + Environment.NewLine);
+                ItemCount += 1;
+                OutputBox.AppendText("# " + ItemCount.ToString() + " " + key.Replace("?", "") + Environment.NewLine);
             }
         }
 
         private void PlayerStats_Click (object sender, RoutedEventArgs a)
         {
-            CombinedResults = InternalMain.GetLoadedReplayData(ImportedOnce);
+            CombinedResults = InternalMain.GetLoadedReplayData();
             OutputBox.Clear();
             OutputBox.Foreground = Brushes.Black;
             OutputBox.AppendText("Alien Kills: " + CombinedResults.FinalResults.AlienKills + Environment.NewLine);
@@ -133,6 +133,63 @@ namespace ParasiteZetaAnalyzer
             OutputBox.AppendText("Victories: " + CombinedResults.FinalResults.Victories + Environment.NewLine);
             OutputBox.AppendText("Deaths: " + CombinedResults.FinalResults.Deaths + Environment.NewLine);
             OutputBox.AppendText("Games Played: " + CombinedResults.FinalResults.GamesPlayed + Environment.NewLine);
+        }
+        private void GameData_Click(object sender, RoutedEventArgs a)
+        {
+            OutputBox.Clear();
+            CombinedResults = InternalMain.GetLoadedReplayData();
+            foreach (var item in CombinedResults.GameResults)
+            {
+                OutputBox.AppendText("ReplayName: " + item.ReplayName + Environment.NewLine);
+                OutputBox.AppendText("MessagesCount: " + item.ChatMessageCount + Environment.NewLine);
+                OutputBox.AppendText("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
+                OutputBox.AppendText("Players: " + Environment.NewLine);
+                foreach (var PlayerItem in item.Players)
+                {
+                    OutputBox.AppendText("PlayerName: " + PlayerItem.Value.PlayerUsername + Environment.NewLine);
+                    OutputBox.AppendText("PlayerHandle: " + PlayerItem.Value.PlayerHandle + Environment.NewLine);
+                }
+                OutputBox.AppendText(Environment.NewLine);
+            }
+        }
+        private void HighestKd_Click(object sender, RoutedEventArgs a)
+        {
+            OutputBox.Clear();
+            var HighestKd = DataCalculator.GetHighestKD(InternalMain.GetFinalResults());
+            foreach (var kdItem in HighestKd)
+            {
+                OutputBox.AppendText("Handle " + kdItem.Handle + Environment.NewLine);
+                OutputBox.AppendText("KD " + kdItem.Kd + Environment.NewLine);
+            }
+        }
+
+        private void AHWinrate_Click(object sender, RoutedEventArgs a)
+        {
+            OutputBox.Clear();
+            var WinRate = DataCalculator.GetAlienHumanWinRate(InternalMain.GetGameResults());
+            OutputBox.AppendText("Human Wins " + WinRate.HumanWins + Environment.NewLine);
+            OutputBox.AppendText("Alien Wins " + WinRate.AlienWins + Environment.NewLine);
+            OutputBox.AppendText("Alien/Human Ratio " + WinRate.AlienToHumanRatio + ":1" + Environment.NewLine);
+        }
+      //  private void HighestKills_Click(object sender, RoutedEventArgs a)
+       // {
+       //     OutputBox.Clear();
+        //    var HighestKills = DataCalculator.GetHighestKills(InternalMain.GetFinalResults());
+        //    foreach (var (key, value) in HighestKills)
+        //    {
+         //       OutputBox.AppendText("Handles " + key + Environment.NewLine);
+          //      OutputBox.AppendText("Kills " + value.AlienKills + value.HumanKills + value.MechKills + Environment.NewLine);
+         //   }
+      //  }
+        private void HighestDeaths_Click(object sender, RoutedEventArgs a)
+        {
+            OutputBox.Clear();
+            var HighestDeaths = DataCalculator.GetHighestDeaths(InternalMain.GetFinalResults());
+            foreach (var (key, value) in HighestDeaths)
+            {
+                OutputBox.AppendText("Handles " + key + Environment.NewLine);
+                OutputBox.AppendText("Deaths " + value.Deaths + Environment.NewLine);
+            }
         }
     }
 }

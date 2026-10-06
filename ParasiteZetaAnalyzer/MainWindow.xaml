@@ -27,10 +27,18 @@
               Grid.ColumnSpan="2">
 
             <MenuItem Header="Actions">
-                <MenuItem Header="Best Alien Forms"
-                          Click="BestAlienForms_Click"/>
                 <MenuItem Header="Player Stats"
                           Click="PlayerStats_Click"/>
+                <MenuItem Header="Best Alien Forms"
+                          Click="BestAlienForms_Click"/>
+                <MenuItem Header="Game Data"
+                          Click="GameData_Click"/>
+                <MenuItem Header="Highest KD"
+                          Click="HighestKd_Click"/>
+                <MenuItem Header="Alien Human Win Rate"
+                          Click="AHWinrate_Click"/>
+                <MenuItem Header="Highest Deaths"
+                          Click="HighestDeaths_Click"/>
             </MenuItem>
 
             <MenuItem Header="Export/Import">
