@@ -146,8 +146,8 @@ namespace ParasiteZetaAnalyzer
                 OutputBox.AppendText("Players: " + Environment.NewLine);
                 foreach (var PlayerItem in item.Players)
                 {
-                    OutputBox.AppendText("PlayerName: " + PlayerItem.Value.PlayerUsername + Environment.NewLine);
-                    OutputBox.AppendText("PlayerHandle: " + PlayerItem.Value.PlayerHandle + Environment.NewLine);
+                    OutputBox.AppendText("PlayerName: " + PlayerItem.PlayerUsername + Environment.NewLine);
+                    OutputBox.AppendText("PlayerHandle: " + PlayerItem.PlayerHandle + Environment.NewLine);
                 }
                 OutputBox.AppendText(Environment.NewLine);
             }
