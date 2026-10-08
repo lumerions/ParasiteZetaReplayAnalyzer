@@ -383,7 +383,7 @@ public class InternalMain : Other
 
                     foreach (var ReplayPath in Directory.EnumerateFiles(UserMultiplayerFolder, "*.SC2Replay"))
                     {
-                        if (!Benchmark)
+                        if (Benchmark)
                         {
                             ReplayPaths.Add(ReplayPath);
                         } else
@@ -397,7 +397,7 @@ public class InternalMain : Other
             }
         }
 
-        if (!Benchmark)
+        if (Benchmark)
         {
             await Parallel.ForEachAsync(ReplayPaths, new ParallelOptions
             {
