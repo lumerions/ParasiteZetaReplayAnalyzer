@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 
 namespace Internal.Models;
 
@@ -30,7 +31,7 @@ public class Models
         public int ChatMessageCount { get; init; }
         public double ReplayLength { get; init; }
         public string? WinningAlienUnitType { get; init; }
-        public Dictionary<string, PlayersReplayData> Players { get; init; }
+        public List<PlayersReplayData> Players { get; init; }
     }
 
     public class CombinedDataResults
@@ -51,7 +52,7 @@ public class Models
         public string ReplayName { get; set; }
     }
 
-    public static readonly HashSet<string> AlienUnits = new()
+    public static readonly FrozenSet<string> AlienUnits = new[]
     {
         "XenomorphMatriarch",
         "Yagdra",
@@ -97,9 +98,9 @@ public class Models
         "BroodLord",
         "Dehaka",
         "DehakaMirrorImage"
-    };
+    }.ToFrozenSet();
 
-    public static readonly HashSet<string> MechUnits = new()
+    public static readonly FrozenSet<string> MechUnits = new[]
     {
         "WarHound",
         "MengskGoliath",
@@ -113,5 +114,5 @@ public class Models
         "ImmortalTaldarim",
         "ColossusTaldarim",
         "ZealotPurifier"
-    };
+    }.ToFrozenSet();
 }

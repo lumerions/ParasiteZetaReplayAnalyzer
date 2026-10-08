@@ -21,38 +21,13 @@ public class InternalMain : Other
     private static readonly ReplayDecoder decoder = new();
     private static readonly WshShell shell = new();
 
-    public static void UpdateStatData (string PlayerHandle, bool IncrementGamesPlayed, int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths)
-    {
-        if (IncrementGamesPlayed)
-        {
-            ExistingGamesPlayed += 1;
-        }
-        
-        FinalResults.AddOrUpdate(PlayerHandle,
-        new Models.Models.FinalResultsDto
-        {
-            AlienKills = ExistingAlienKills,
-            HumanKills = ExistingHumanKills,
-            MechKills = ExistingMechKills,
-            Ties = ExistingTies,
-            Victories = ExistingVictories,
-            Deaths = ExistingDeaths,
-            GamesPlayed = ExistingGamesPlayed
-        }, 
-        (key, currentData) => {
-
-            return new Models.Models.FinalResultsDto 
-            {
-                AlienKills = ExistingAlienKills,
-                HumanKills = ExistingHumanKills,
-                MechKills = ExistingMechKills,
-                Ties = ExistingTies,
-                Victories = ExistingVictories,
-                Deaths = ExistingDeaths,
-                GamesPlayed = ExistingGamesPlayed
-            };
-        });
-    }
+    private struct PlayerDataChanges {
+        public string AlienFormType;
+        public int AlienKills;
+        public int HumanKills;
+        public int MechKills;
+        public int DeathCount;
+    };
 
     public static (int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths) GetUserInformation (string PlayerHandle)
     {
@@ -115,7 +90,8 @@ public class InternalMain : Other
             return false;
         }
 
-        Dictionary<string, Models.Models.PlayersReplayData> PlayerData = new();
+        var PlayerData = new List<Models.Models.PlayersReplayData>(12);
+
         string[] PlayerIdHandles = new string[14];
 
         string GetHandlesByPlayerId (int PlayerId)
@@ -135,15 +111,12 @@ public class InternalMain : Other
             PlayerIdHandles[player.WorkingSetSlotId] = PlayerHandle;
             
             AddToPlayerData(PlayerData, player.Name, PlayerHandle, ReplayFileName);            
-
-            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
-
-            UpdateStatData(PlayerHandle, true, ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths);
         }
 
-        var AliveAlienPlayers = new HashSet<string>();
-        var AliveHumanPlayers = new HashSet<string>();
-        var DeathCounts = new int[14];
+        int AliveHumanPlayerCount = 0;
+        int AliveAlienPlayerCount = 0;
+        var DiedAlready = new bool[14];
+        var PDData = new PlayerDataChanges[14];
 
         foreach (var unit in replay.TrackerEvents.SUnitBornEvents)
         {
@@ -156,14 +129,21 @@ public class InternalMain : Other
                 continue;
             }
 
+            if (DiedAlready[PlayerIdWhoDied])
+            {
+                continue;
+            }
+
             if (IsAlienUnit(UnitType))
             {
-                AliveAlienPlayers.Add(GetHandlesByPlayerId(PlayerIdWhoDied) + "?" + UnitType);
+                PDData[PlayerIdWhoDied].AlienFormType = UnitType;
+                AliveAlienPlayerCount += 1;
             } else
             {
                 if (!IsMechUnit(UnitType))
                 {
-                    AliveHumanPlayers.Add(GetHandlesByPlayerId(PlayerIdWhoDied));
+                    PDData[PlayerIdWhoDied].AlienFormType = "Human";
+                    AliveHumanPlayerCount += 1;
                 }
             }
 
@@ -194,7 +174,9 @@ public class InternalMain : Other
 
             if (IsAlienUnit(UnitType))
             {
-                AliveAlienPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied) + "?" + UnitType);
+                PDData[PlayerIdWhoDied].AlienFormType = "DeadAlien";
+
+                AliveAlienPlayerCount -= 1;
 
                 if (UserPlayerHandles.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)))
                 {
@@ -203,7 +185,10 @@ public class InternalMain : Other
             } else
             {
                 if (!IsMechUnit(UnitType)) {
-                    AliveHumanPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied));
+
+                    PDData[PlayerIdWhoDied].AlienFormType = "DeadHuman";
+
+                    AliveHumanPlayerCount -= 1;
 
                     if (UserPlayerHandles.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)))
                     {
@@ -221,59 +206,35 @@ public class InternalMain : Other
 
             if (string.IsNullOrEmpty(PlayerHandle)) continue;
 
-            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
-
             if (AlienKill)
             {
-                ExistingAlienKills += 1;
+                PDData[KillerId].AlienKills = PDData[KillerId].AlienKills += 1;
             } else
             {
                 if (!MechKill)
                 {
-                    ExistingHumanKills += 1;
+                    PDData[KillerId].HumanKills = PDData[KillerId].HumanKills += 1;
                 } else
                 {
-                    ExistingMechKills += 1;
+                    PDData[KillerId].MechKills = PDData[KillerId].MechKills += 1;
                 }
             }
 
             if (UserUsingApplicationDied)
             {
-                DeathCounts[PlayerIdWhoDied] = DeathCounts[PlayerIdWhoDied] += 1;
+                PDData[PlayerIdWhoDied].DeathCount = PDData[PlayerIdWhoDied].DeathCount += 1;
             }
 
-            FinalResults.AddOrUpdate(PlayerHandle, 
-            new Models.Models.FinalResultsDto
-            {
-                AlienKills = ExistingAlienKills,
-                HumanKills = ExistingHumanKills,
-                MechKills = ExistingMechKills,
-                Ties = ExistingTies,
-                Victories = ExistingVictories,
-                Deaths = ExistingDeaths,
-                GamesPlayed = ExistingGamesPlayed
-            }, 
-            (key, currentData) => {
-                return new Models.Models.FinalResultsDto 
-                {
-                    AlienKills = ExistingAlienKills,
-                    HumanKills = ExistingHumanKills,
-                    MechKills = ExistingMechKills,
-                    Ties = ExistingTies,
-                    Victories = ExistingVictories,
-                    Deaths = ExistingDeaths,
-                    GamesPlayed = ExistingGamesPlayed
-                };
-            });
+            DiedAlready[PlayerIdWhoDied] = true;
         }
 
         string DetermineVictoryCondition ()
         {
-            if (AliveAlienPlayers.Count > AliveHumanPlayers.Count)
+            if (AliveAlienPlayerCount > AliveHumanPlayerCount)
             {
                 return "Alien";
             }
-            if (AliveAlienPlayers.Count == AliveHumanPlayers.Count)
+            if (AliveAlienPlayerCount == AliveHumanPlayerCount)
             {
                 return "Tie";
             }
@@ -281,28 +242,30 @@ public class InternalMain : Other
             return "Human";
         }
 
-        void UpdateWinLoseCount (string PlayerHandle, bool Won, bool? Tie, bool? DeathIncrement, int DeathIncrementCount)
+        void UpdateWinLoseCount (string PlayerHandle, bool Won, bool? Tie, int DeathIncrementCount, int MechKills, int AlienKills, int HumanKills)
         {
-            
-            if (DeathIncrement == null)
+            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
+
+            ExistingMechKills += MechKills;
+            ExistingAlienKills += AlienKills;
+            ExistingHumanKills += HumanKills;
+
+            if (Won && Tie == null)
             {
-                if (PlayerHandle.Contains("?"))
-                {
-                    var QuestionMarkFound = false;
-
-                    StringBuilder sb = new();
-
-                    foreach (var character in PlayerHandle)
-                    {
-                        if (QuestionMarkFound) continue;
-                        if (character.ToString() == "?") QuestionMarkFound = true;
-                        if (!QuestionMarkFound) sb.Append(character);
-                    }
-                    PlayerHandle = sb.ToString();
-                }
+                ExistingVictories += 1;
             }
 
-            var (ExistingMechKills, ExistingAlienKills, ExistingHumanKills, ExistingTies, ExistingVictories, ExistingGamesPlayed, ExistingDeaths) = GetUserInformation(PlayerHandle);
+            if (Tie != null)
+            {
+                ExistingTies += 1;
+            }
+
+            if (DeathIncrementCount > 0)
+            {
+                ExistingDeaths += DeathIncrementCount;
+            }
+
+            ExistingGamesPlayed += 1;
 
             FinalResults.AddOrUpdate(PlayerHandle, 
                 new Models.Models.FinalResultsDto
@@ -316,22 +279,6 @@ public class InternalMain : Other
                     GamesPlayed = ExistingGamesPlayed
                 }, 
                 (key, currentData) => {
-
-                    if (Won && Tie == null && DeathIncrement == null)
-                    {
-                        ExistingVictories += 1;
-                    }
-
-                    if (Tie != null && DeathIncrement == null)
-                    {
-                        ExistingTies += 1;
-                    }
-
-                    if (DeathIncrement == true && DeathIncrementCount > 0)
-                    {
-                        ExistingDeaths += DeathIncrementCount;
-                    }
-
                     return new Models.Models.FinalResultsDto 
                     {
                         AlienKills = ExistingAlienKills,
@@ -349,25 +296,28 @@ public class InternalMain : Other
         var AlienWin = WhoWon == "Alien";
         var MostUsedAlienForm = new List<string>();
 
-        foreach (var item in AliveAlienPlayers)
+        for (int i = 0; i < PDData.Length; i++)
         {
-            if (item == null) continue;
+            var handle = GetHandlesByPlayerId(i);
 
-            if (item.Contains("?"))
+            if (string.IsNullOrEmpty(handle))
+                continue;
+
+            ref var Data = ref PDData[i];
+            var MechKills = Data.MechKills;
+            var AlienKills = Data.AlienKills;
+            var HumanKills = Data.HumanKills;
+            var AlienFormType = Data.AlienFormType;
+            var IsHumanPlayer = AlienFormType == "Human" || AlienFormType == "DeadHuman";
+
+            if (!IsHumanPlayer)
             {
-                StringBuilder sb = new();
-
-                var QuestionMarkFound = false;
-
-                foreach (var character in item)
-                {
-                    if (character.ToString() == "?") QuestionMarkFound = true;
-                    if (QuestionMarkFound) sb.Append(character);
-                }
-
-                MostUsedAlienForm.Add(sb.ToString());
+                MostUsedAlienForm.Add(AlienFormType);
+                UpdateWinLoseCount(handle, AlienWin, WhoWon == "Tie" ? true : null, Data.DeathCount, MechKills, AlienKills, HumanKills);
+            } else
+            {
+                UpdateWinLoseCount(handle, !AlienWin, WhoWon == "Tie" ? true : null, Data.DeathCount, MechKills, AlienKills, HumanKills);
             }
-            UpdateWinLoseCount(item, AlienWin, WhoWon == "Tie" ? true : null, null, 0);
         }
 
         var LeastUsedAlienForm = MostUsedAlienForm.GroupBy(x => x).MinBy(x => x.Count())?.Key;  // we do this because certain host unit types are different from spawn unit types
@@ -377,31 +327,10 @@ public class InternalMain : Other
             LeastUsedAlienForm = "None";
         }
 
-        foreach (var item in AliveHumanPlayers)
-        {
-            if (item == null) continue;
-            UpdateWinLoseCount(item, !AlienWin, WhoWon == "Tie" ? true : null, null, 0);
-        }
-
-        for (int i = 0; i < DeathCounts.Length; i++)
-        {
-            var handle = GetHandlesByPlayerId(i);
-
-            if (string.IsNullOrEmpty(handle))
-                continue;
-
-            var deathCount = DeathCounts[i];
-
-            if (deathCount == 0)
-                continue;
-
-            UpdateWinLoseCount(handle, !AlienWin, WhoWon == "Tie" ? true : null, true, deathCount);
-        }
-
         var ReplayChatMessageCount = replay.ChatMessages.Count;
         var ReplayLength = replay.Header.ElapsedGameLoops / 22.4;
         TimeSpan TimeSpanSeconds = TimeSpan.FromSeconds(ReplayLength);
-        double TimeSpanMinutes = TimeSpanSeconds.Minutes;
+        double TimeSpanMinutes = TimeSpanSeconds.TotalMinutes;
 
         GameResults.Add(new Models.Models.IndividualGameResultsDto
         {
@@ -412,12 +341,13 @@ public class InternalMain : Other
             Players = PlayerData
         });
 
-        ReplaysAnalyzed += 1;
+        Interlocked.Increment(ref ReplaysAnalyzed);
         return true;
     }
 
     public static async Task StartLoadingReplays ()
     {
+        var Benchmark = false;
         var ReplayPaths = new List<string>();
         Stopwatch stopwatch = new();
         stopwatch.Start();
@@ -453,7 +383,13 @@ public class InternalMain : Other
 
                     foreach (var ReplayPath in Directory.EnumerateFiles(UserMultiplayerFolder, "*.SC2Replay"))
                     {
-                        ReplayPaths.Add(ReplayPath);
+                        if (!Benchmark)
+                        {
+                            ReplayPaths.Add(ReplayPath);
+                        } else
+                        {
+                            await LoadReplay(ReplayPath);
+                        }
                     }
 
                     Count += 1;
@@ -461,14 +397,17 @@ public class InternalMain : Other
             }
         }
 
-        await Parallel.ForEachAsync(ReplayPaths, new ParallelOptions
+        if (!Benchmark)
         {
-            MaxDegreeOfParallelism = Environment.ProcessorCount
-        }, 
-        async (ReplayPath, cancellationToken) => 
-        {
-            await LoadReplay(ReplayPath);
-        });
+            await Parallel.ForEachAsync(ReplayPaths, new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount
+            }, 
+            async (ReplayPath, cancellationToken) => 
+            {
+                await LoadReplay(ReplayPath);
+            });
+        }
 
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
       //  var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
@@ -495,14 +434,14 @@ public class InternalMain : Other
         var FinalVictoryCount = 0; 
         var FinalGamesPlayed = 0; 
         var FinalDeathCount = 0;
-        string s = "";
+        string ReplayHandle = "";
 
         foreach (var playerhand in UserPlayerHandles)
         {
-            s = playerhand;
+            ReplayHandle = playerhand;
         }
 
-        var hand = ExportSC2Handle == null ? s : ExportSC2Handle;
+        var hand = ExportSC2Handle == null ? ReplayHandle : ExportSC2Handle;
         var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(hand);
         FinalMechKills += ResultMechKills;
         FinalAlienKills += ResultAlienKills;

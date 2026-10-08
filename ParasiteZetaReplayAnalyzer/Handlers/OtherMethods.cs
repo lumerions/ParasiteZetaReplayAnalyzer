@@ -41,24 +41,14 @@ public class Other
         return false;
     }
 
-    public static void AddToPlayerData (Dictionary<string, Models.Models.PlayersReplayData> PlayerData, string PlrName, string PlrHandle, string ReplayFileName) 
+    public static void AddToPlayerData (List<Models.Models.PlayersReplayData> PlayerData, string PlrName, string PlrHandle, string ReplayFileName) 
     {
-        bool Result = PlayerData.TryAdd(RandomNumberGenerator.GetHexString(6), new Models.Models.PlayersReplayData
+        PlayerData.Add(new Models.Models.PlayersReplayData
         {
             PlayerUsername = PlrName,
             PlayerHandle = PlrHandle,
             ReplayName = ReplayFileName
         }); 
-
-        if (!Result)
-        {
-            PlayerData.Add(RandomNumberGenerator.GetHexString(6), new Models.Models.PlayersReplayData
-            {
-                PlayerUsername = PlrName,
-                PlayerHandle = PlrHandle,
-                ReplayName = ReplayFileName
-            });
-        }
     }
 
     public static void UpdateLocalDataViaCsvImport (Models.Models.CombinedDataResults Combined,  Dictionary<string, Models.Models.FinalResultsDto> PlayerStats)
@@ -88,12 +78,12 @@ public class Other
                 ChatMessageCount = x.ChatMessageCount,
                 ReplayLength = x.ReplayLength,
                 WinningAlienUnitType = x.WinningAlienUnitType,
-                Players = CombinedData.PlayerReplayData.Where(item => item.ReplayName == x.ReplayName).ToDictionary(listitem => RandomNumberGenerator.GetHexString(6), listitemvalue => new Models.Models.PlayersReplayData
+                Players = CombinedData.PlayerReplayData.Where(item => item.ReplayName == x.ReplayName).Select(item => new Models.Models.PlayersReplayData
                 {
-                    ReplayName = listitemvalue.ReplayName,
-                    PlayerHandle = listitemvalue.PlayerHandle,
-                    PlayerUsername = listitemvalue.PlayerUsername
-                })
+                    ReplayName = item.ReplayName,
+                    PlayerHandle = item.PlayerHandle,
+                    PlayerUsername = item.PlayerUsername
+                }).ToList()
             }).ToList();
 
             if (PendingPlayerStats.Count > 0)

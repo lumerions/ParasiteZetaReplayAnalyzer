@@ -60,12 +60,12 @@ public class ExportImport
                 writer.WriteElementString("waut", item.WinningAlienUnitType == null ? "" : item.WinningAlienUnitType.ToString());
                 writer.WriteStartElement("players");
 
-                foreach (var (key, value) in item.Players)
+                foreach (var playerItem in item.Players)
                 {
                     writer.WriteStartElement("player");
-                    writer.WriteElementString("handle", value.PlayerHandle);
-                    writer.WriteElementString("pu", value.PlayerUsername);
-                    writer.WriteElementString("rfn", value.ReplayName);
+                    writer.WriteElementString("handle", playerItem.PlayerHandle);
+                    writer.WriteElementString("pu", playerItem.PlayerUsername);
+                    writer.WriteElementString("rfn", playerItem.ReplayName);
                     writer.WriteEndElement();
                 }
 
@@ -129,9 +129,9 @@ public class ExportImport
 
                 CSVGameData.Add($"{ReplayName},{ChatMessageCount},{ReplayLength},{WinningAlienUnitType}");
 
-                foreach (var (key, value) in item.Players)
+                foreach (var playerItem in item.Players)
                 {
-                    CSVPlayerData.Add($"{value.PlayerHandle},{value.PlayerUsername},{value.ReplayName}");
+                    CSVPlayerData.Add($"{playerItem.PlayerHandle},{playerItem.PlayerUsername},{playerItem.ReplayName}");
                 }
             }
 
@@ -201,7 +201,7 @@ public class ExportImport
 
                 if (int.TryParse(MessagesCount, out var MessagesCountInt) && double.TryParse(ReplayLength, out var ReplayLengthInt))
                 {
-                    var PlayersList = new Dictionary<string, Models.Models.PlayersReplayData>();
+                    var PlayersList = new List<Models.Models.PlayersReplayData>();
 
                     foreach (var p in element.Descendants("player"))
                     {
@@ -369,14 +369,14 @@ public class ExportImport
         {
             var Data = JsonSerializer.Deserialize<Models.Models.CombinedResults>(JsonData);
             var GameResults = new List<Models.Models.IndividualGameResultsDto>();
-            Dictionary<string, Models.Models.PlayersReplayData> PlayerData = new();
+            List<Models.Models.PlayersReplayData> PlayerData = new();
             
             foreach (var item in Data.Games) 
             {
             
                 foreach (var playerItem in item.Players)
                 {
-                    Other.AddToPlayerData(PlayerData, playerItem.Value.PlayerUsername, playerItem.Value.PlayerHandle, playerItem.Value.ReplayName);            
+                    Other.AddToPlayerData(PlayerData, playerItem.PlayerUsername, playerItem.PlayerHandle, playerItem.ReplayName);            
                 }
 
                 GameResults.Add(new Models.Models.IndividualGameResultsDto
