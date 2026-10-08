@@ -14,7 +14,7 @@ public class ExportImport
     private static readonly string CSVPlayerDataString = "PlayerHandle, PlayerName, ReplayName";
     private static readonly string CSVGameDataString = "ReplayName, ChatMessageCount, ReplayLength, WinningAlienUnitType";
     private static readonly string CSVDataString = "AlienKills, HumanKills, MechKills, Ties, Victories, GamesPlayed, Deaths, PlayerHandle";
-    public static void ExportAsXml (ConcurrentDictionary<string, Models.Models.FinalResultsDto> ResultsData, List<Models.Models.IndividualGameResultsDto> GameResults)
+    public static void ExportAsXml (ConcurrentDictionary<string, Models.Models.FinalResultsDto> ResultsData, List<Models.Models.IndividualGameResultsDto> GameResults, bool Cache)
     {
         XmlWriterSettings xmlWriterSettings = new XmlWriterSettings
         {
@@ -22,7 +22,9 @@ public class ExportImport
             IndentChars = "     "
         };
 
-        var ReplayDataXMLPath = Path.Combine(AppContext.BaseDirectory, "UserData", "ReplayData.xml");
+        var FileNameToUse = Cache == true ? "UserCache" : "UserData";
+        var DataFileNameToUse = Cache == true ? "CacheData.xml" : "ReplayData.xml";
+        var ReplayDataXMLPath = Path.Combine(AppContext.BaseDirectory, FileNameToUse, DataFileNameToUse);
         var ApplicationUserExportedAlready = false;
 
         using (XmlWriter writer = XmlWriter.Create(ReplayDataXMLPath, xmlWriterSettings))
@@ -161,7 +163,6 @@ public class ExportImport
         var FinalVictoryCount = 0;
         var FinalTieCount = 0;
         var FinalDeathCount = 0;
-        var SC2Handle = "";
 
         try {
             XDocument document = XDocument.Load(XmlFilePath);
@@ -175,11 +176,6 @@ public class ExportImport
                 var VictoryCount = element.Element("v")?.Value;
                 var TieCount = element.Element("t")?.Value;
                 var DeathCount = element.Element("d")?.Value;
-
-                if (element.Element("handle")?.Value != null)
-                {
-                    SC2Handle = element.Element("handle")?.Value;
-                }
 
                 if (int.TryParse(MechKills, out var MechKillsInt) && int.TryParse(HumanKills, out var HumanKillsInt) && int.TryParse(AlienKills, out var AlienKillsInt) && int.TryParse(GamesPlayed, out var GamesPlayedInt) && int.TryParse(VictoryCount, out var VictoryCountInt) && int.TryParse(TieCount, out var TieCountInt) && int.TryParse(DeathCount, out var DeathCountInt))
                 {

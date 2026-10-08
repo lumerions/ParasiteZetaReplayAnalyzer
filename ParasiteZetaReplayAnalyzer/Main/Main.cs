@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -152,6 +153,11 @@ public class InternalMain : Other
             var Died = unit.SUnitDiedEvent;
 
             if (PlayerIdWhoDied <= 0 || PlayerIdWhoDied > 12)
+            {
+                continue;
+            }
+
+            if (!AliveAlienPlayers.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)) && !AliveHumanPlayers.Contains(GetHandlesByPlayerId(PlayerIdWhoDied))) 
             {
                 continue;
             }
@@ -412,12 +418,15 @@ public class InternalMain : Other
             Players = PlayerData
         });
 
-        ReplaysAnalyzed += 1;
+        Interlocked.Increment(ref ReplaysAnalyzed);
         return true;
     }
 
     public static async Task StartLoadingReplays ()
     {
+        var UseCache = false;
+        var UserCacheLocation = Path.Combine(AppContext.BaseDirectory, "UserCache");
+        var CacheInfo = Path.Combine(UserCacheLocation, "CacheInfo");
         var ReplayPaths = new List<string>();
         Stopwatch stopwatch = new();
         stopwatch.Start();
@@ -453,7 +462,22 @@ public class InternalMain : Other
 
                     foreach (var ReplayPath in Directory.EnumerateFiles(UserMultiplayerFolder, "*.SC2Replay"))
                     {
-                        ReplayPaths.Add(ReplayPath);
+                        if (System.IO.File.Exists(CacheInfo))
+                        {
+                            DateTime creationUTC = System.IO.File.GetLastWriteTimeUtc(ReplayPath);
+                            DateTimeOffset fileCreationDate = DateTimeOffset.Parse(creationUTC.ToString("O"));
+                            string cacheInformation = System.IO.File.ReadAllText(CacheInfo);
+                            DateTimeOffset cacheInformationDate = DateTimeOffset.Parse(cacheInformation);
+
+                            UseCache = true;
+                            if (fileCreationDate > cacheInformationDate)
+                            {
+                                ReplayPaths.Add(ReplayPath);
+                            }
+                        } else
+                        {
+                            ReplayPaths.Add(ReplayPath);
+                        }
                     }
 
                     Count += 1;
@@ -470,6 +494,13 @@ public class InternalMain : Other
             await LoadReplay(ReplayPath);
         });
 
+        if (UseCache) {
+            //ExportImport.ImportAsXml(Path.Combine(UserCacheLocation, "CacheData.xml"));
+           // var NewCachedFinalResults = FinalResults.Concat(FinalResults);
+            //ExportImport.ExportAsXml(FinalResults, GameResults, true);
+            // NOT DONE working on caching
+        }
+
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
       //  var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
@@ -482,7 +513,8 @@ public class InternalMain : Other
         //}
 
         stopwatch.Stop();
-        //ExportImport.ImportAsCsv(@"C:\Users\asdfg\Desktop\ParasiteZetaReplayAnalyzer\bin\Debug\net10.0\UserData\ReplayData.csv");
+        System.IO.File.WriteAllText(CacheInfo, DateTime.UtcNow.ToString("O"));
+        ExportImport.ExportAsXml(FinalResults, GameResults, true);
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 
