@@ -470,10 +470,10 @@ public class InternalMain : Other
                             DateTimeOffset cacheInformationDate = DateTimeOffset.Parse(cacheInformation);
 
                             UseCache = true;
-                            if (fileCreationDate > cacheInformationDate)
-                            {
+                           // if (fileCreationDate > cacheInformationDate)
+                          //  {
                                 ReplayPaths.Add(ReplayPath);
-                            }
+                           // }
                         } else
                         {
                             ReplayPaths.Add(ReplayPath);
