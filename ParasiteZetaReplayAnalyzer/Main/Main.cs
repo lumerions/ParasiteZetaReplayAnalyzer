@@ -419,6 +419,7 @@ public class InternalMain : Other
         });
 
         Interlocked.Increment(ref ReplaysAnalyzed);
+
         return true;
     }
 
@@ -427,6 +428,7 @@ public class InternalMain : Other
         var UseCache = false;
         var UserCacheLocation = Path.Combine(AppContext.BaseDirectory, "UserCache");
         var CacheInfo = Path.Combine(UserCacheLocation, "CacheInfo");
+        var CachedJsonData = Path.Combine(UserCacheLocation, "CacheData.json");
         var ReplayPaths = new List<string>();
         Stopwatch stopwatch = new();
         stopwatch.Start();
@@ -462,7 +464,7 @@ public class InternalMain : Other
 
                     foreach (var ReplayPath in Directory.EnumerateFiles(UserMultiplayerFolder, "*.SC2Replay"))
                     {
-                        if (System.IO.File.Exists(CacheInfo))
+                        if (System.IO.File.Exists(CacheInfo) && System.IO.File.Exists(CachedJsonData))
                         {
                             DateTime creationUTC = System.IO.File.GetLastWriteTimeUtc(ReplayPath);
                             DateTimeOffset fileCreationDate = DateTimeOffset.Parse(creationUTC.ToString("O"));
@@ -470,10 +472,10 @@ public class InternalMain : Other
                             DateTimeOffset cacheInformationDate = DateTimeOffset.Parse(cacheInformation);
 
                             UseCache = true;
-                           // if (fileCreationDate > cacheInformationDate)
-                          //  {
+                            if (fileCreationDate > cacheInformationDate)
+                            {
                                 ReplayPaths.Add(ReplayPath);
-                           // }
+                            }
                         } else
                         {
                             ReplayPaths.Add(ReplayPath);
@@ -494,14 +496,8 @@ public class InternalMain : Other
             await LoadReplay(ReplayPath);
         });
 
-        if (UseCache) {
-            //ExportImport.ImportAsXml(Path.Combine(UserCacheLocation, "CacheData.xml"));
-           // var NewCachedFinalResults = FinalResults.Concat(FinalResults);
-            //ExportImport.ExportAsXml(FinalResults, GameResults, true);
-            // NOT DONE working on caching
-        }
-
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
+        Console.WriteLine($"Cache Used:{UseCache}");
       //  var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
       //  foreach (var item in MostPlayedWith)
@@ -512,9 +508,98 @@ public class InternalMain : Other
            // }
         //}
 
-        stopwatch.Stop();
+        if (UseCache) {
+            var NewCachedFinalResults = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(
+                FinalResults.Select(kvp => new KeyValuePair<string, Models.Models.FinalResultsDto>(kvp.Key, new Models.Models.FinalResultsDto
+                {
+                    AlienKills = kvp.Value.AlienKills,
+                    HumanKills = kvp.Value.HumanKills,
+                    MechKills = kvp.Value.MechKills,
+                    Deaths = kvp.Value.Deaths,
+                    Ties = kvp.Value.Ties,
+                    Victories = kvp.Value.Victories,
+                    GamesPlayed = kvp.Value.GamesPlayed
+                })
+            ));
+
+            var NewCachedGameResults =
+                GameResults.Select(item => new Models.Models.IndividualGameResultsDto {
+                    ReplayName = item.ReplayName,
+                    ChatMessageCount = item.ChatMessageCount,
+                    ReplayLength = item.ReplayLength,
+                    WinningAlienUnitType = item.WinningAlienUnitType,
+                    Players = item.Players.Select(playerItem => new Models.Models.PlayersReplayData
+                    {
+                        PlayerUsername = playerItem.PlayerUsername,
+                        PlayerHandle = playerItem.PlayerHandle,
+                        ReplayName = playerItem.ReplayName
+                    }).ToList()
+                }).ToList();
+
+            var CachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
+            var GameResultsCombinedConcat = NewCachedGameResults.Concat(CachedData.GameResults);
+            var FinalResultsCombinedConcat = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(CachedData.FinalResultsList);
+
+            foreach (var (key, value) in NewCachedFinalResults)
+            {
+                FinalResultsCombinedConcat.AddOrUpdate(
+                    key,
+                    _ => new Models.Models.FinalResultsDto
+                    {
+                        AlienKills = value.AlienKills,
+                        HumanKills = value.HumanKills,
+                        MechKills = value.MechKills,
+                        Deaths = value.Deaths,
+                        Ties = value.Ties,
+                        Victories = value.Victories,
+                        GamesPlayed = value.GamesPlayed
+                    },
+                    (_, cached) => new Models.Models.FinalResultsDto
+                    {
+                        AlienKills = cached.AlienKills + value.AlienKills,
+                        HumanKills = cached.HumanKills + value.HumanKills,
+                        MechKills = cached.MechKills + value.MechKills,
+                        Deaths = cached.Deaths + value.Deaths,
+                        Ties = cached.Ties + value.Ties,
+                        Victories = cached.Victories + value.Victories,
+                        GamesPlayed = cached.GamesPlayed + value.GamesPlayed
+                    }
+                );
+            }
+
+            var FinalResultsCombined = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(
+                FinalResultsCombinedConcat.Select(kvp => new KeyValuePair<string, Models.Models.FinalResultsDto>(kvp.Key, new Models.Models.FinalResultsDto
+                {
+                    AlienKills = kvp.Value.AlienKills,
+                    HumanKills = kvp.Value.HumanKills,
+                    MechKills = kvp.Value.MechKills,
+                    Deaths = kvp.Value.Deaths,
+                    Ties = kvp.Value.Ties,
+                    Victories = kvp.Value.Victories,
+                    GamesPlayed = kvp.Value.GamesPlayed
+                })
+            ));
+
+            var GameResultsCombined = 
+                GameResultsCombinedConcat.Select(item => new Models.Models.IndividualGameResultsDto
+                {
+                    ReplayName = item.ReplayName,
+                    ChatMessageCount = item.ChatMessageCount,
+                    ReplayLength = item.ReplayLength,
+                    WinningAlienUnitType = item.WinningAlienUnitType,
+                    Players = item.Players
+                }).ToList();
+
+            ExportImport.ExportAsJson(FinalResultsCombined, GameResultsCombined, true);
+            GameResults = GameResultsCombined;
+            FinalResults = FinalResultsCombined;
+        } else
+        {
+            ExportImport.ExportAsJson(FinalResults, GameResults, true);
+        }
+
         System.IO.File.WriteAllText(CacheInfo, DateTime.UtcNow.ToString("O"));
-        ExportImport.ExportAsXml(FinalResults, GameResults, true);
+        stopwatch.Stop();
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
 
@@ -527,14 +612,14 @@ public class InternalMain : Other
         var FinalVictoryCount = 0; 
         var FinalGamesPlayed = 0; 
         var FinalDeathCount = 0;
-        string s = "";
+        string playerHandle = "";
 
         foreach (var playerhand in UserPlayerHandles)
         {
-            s = playerhand;
+            playerHandle = playerhand;
         }
 
-        var hand = ExportSC2Handle == null ? s : ExportSC2Handle;
+        var hand = ExportSC2Handle == null ? playerHandle : ExportSC2Handle;
         var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(hand);
         FinalMechKills += ResultMechKills;
         FinalAlienKills += ResultAlienKills;

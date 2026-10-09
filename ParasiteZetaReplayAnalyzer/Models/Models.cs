@@ -34,11 +34,18 @@ public class Models
         public List<PlayersReplayData> Players { get; init; }
     }
 
-    public class CombinedDataResults
+    public class CombinedDataBase
+    {
+        public List<IndividualGameResultsDto> GameResults { get; set; }
+        public List<PlayersReplayData> PlayerReplayData { get; set; }
+    }
+
+    public class CombinedDataResults : CombinedDataBase
     {
         public List<IndividualGameResultsDto> GameResults { get; set; }
         public FinalResultsDto FinalResults { get; set; }
         public List<PlayersReplayData> PlayerReplayData { get; set; }
+        public Dictionary<string, FinalResultsDto> FinalResultsList { get; set; }
     }
 
     public class PlayerDataItem

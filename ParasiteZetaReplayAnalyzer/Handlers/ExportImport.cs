@@ -80,7 +80,7 @@ public class ExportImport
         }
     }
 
-    public static void ExportAsJson (ConcurrentDictionary<string, Models.Models.FinalResultsDto> ResultsData, List<Models.Models.IndividualGameResultsDto> GameResults)
+    public static void ExportAsJson (ConcurrentDictionary<string, Models.Models.FinalResultsDto> ResultsData, List<Models.Models.IndividualGameResultsDto> GameResults, bool Cache)
     {
         var JsonWriteOptions = new JsonSerializerOptions { WriteIndented = true };
 
@@ -88,7 +88,16 @@ public class ExportImport
         {
             var combined = new Models.Models.CombinedResults { Players = ResultsData, Games = GameResults };
             string Json = JsonSerializer.Serialize(combined, JsonWriteOptions);
-            var JsonFilePath = Path.Combine(AppContext.BaseDirectory, "UserData", "ReplayData.json");
+            var JsonFilePath = "";
+
+            if (!Cache)
+            {
+                JsonFilePath = Path.Combine(AppContext.BaseDirectory, "UserData", "ReplayData.json");
+            } else
+            {
+                JsonFilePath = Path.Combine(AppContext.BaseDirectory, "UserCache", "CacheData.json");
+            }
+
             File.WriteAllText(JsonFilePath, Json);
         } catch (Exception err)
         {
@@ -356,19 +365,20 @@ public class ExportImport
         return new Models.Models.CombinedDataResults {GameResults = new(), FinalResults = new(), PlayerReplayData = new()};
     }
 
-    public static Models.Models.CombinedDataResults? ImportAsJson (string JsonFilePath)
+    public static Models.Models.CombinedDataResults? ImportAsJson (string JsonFilePath, bool UseCache)
     {
         if (Path.GetExtension(JsonFilePath) != ".json") return null;
 
         var JsonData = File.ReadAllText(JsonFilePath);
         try
         {
+            var statPlayerData = new Dictionary<string, Models.Models.FinalResultsDto>();
             var Data = JsonSerializer.Deserialize<Models.Models.CombinedResults>(JsonData);
             var GameResults = new List<Models.Models.IndividualGameResultsDto>();
-            List<Models.Models.PlayersReplayData> PlayerData = new();
             
             foreach (var item in Data.Games) 
             {
+                List<Models.Models.PlayersReplayData> PlayerData = new();
             
                 foreach (var playerItem in item.Players)
                 {
@@ -385,40 +395,38 @@ public class ExportImport
                 });
             }
 
-            var FinalMechKills = 0;
-            var FinalHumanKills = 0;
-            var FinalAlienKills = 0;
-            var FinalGamesPlayed = 0;
-            var FinalVictoryCount = 0;
-            var FinalTieCount = 0;
-            var FinalDeathCount = 0;
+            var LastKey = "";
 
             foreach (var stat in Data.Players)
             {
-                FinalMechKills = stat.Value.MechKills;
-                FinalHumanKills = stat.Value.HumanKills;
-                FinalAlienKills = stat.Value.AlienKills;
-                FinalGamesPlayed = stat.Value.GamesPlayed;
-                FinalVictoryCount = stat.Value.Victories;
-                FinalTieCount = stat.Value.Ties;
-                FinalDeathCount = stat.Value.Deaths;
+                statPlayerData.Add(stat.Key, new Models.Models.FinalResultsDto {
+                    AlienKills = stat.Value.AlienKills,
+                    HumanKills = stat.Value.HumanKills,
+                    MechKills = stat.Value.MechKills,
+                    Ties = stat.Value.Ties,
+                    Victories = stat.Value.Victories,
+                    Deaths = stat.Value.Deaths,
+                    GamesPlayed = stat.Value.GamesPlayed
+                });
+
+                if (UseCache) {
+                    LastKey = stat.Key;
+                } else
+                {
+                    if (OtherMethods.Other.GetApplicationUserHandles().Contains(stat.Key))
+                    {
+                        LastKey = stat.Key;
+                    }
+                }
             }
 
             var CombinedObject = new Models.Models.CombinedDataResults {
                 GameResults = GameResults, 
-                FinalResults = new Models.Models.FinalResultsDto {
-                    AlienKills = FinalAlienKills,
-                    HumanKills = FinalHumanKills,
-                    MechKills = FinalMechKills,
-                    Ties = FinalTieCount,
-                    Victories = FinalVictoryCount,
-                    Deaths = FinalDeathCount,
-                    GamesPlayed = FinalGamesPlayed
-                },
+                FinalResultsList = statPlayerData,
                 PlayerReplayData = new()
             };
 
-            var ChangeDataDict = new Dictionary<string, Models.Models.FinalResultsDto> { { OtherMethods.Other.GetAvailableHandleOrDefault(), CombinedObject.FinalResults } };
+            var ChangeDataDict = new Dictionary<string, Models.Models.FinalResultsDto> { { OtherMethods.Other.GetAvailableHandleOrDefault(), statPlayerData[LastKey]} };
             OtherMethods.Other.UpdateLocalDataInternalMainUpdate(ChangeDataDict);
             return CombinedObject;
         } catch (Exception err)
