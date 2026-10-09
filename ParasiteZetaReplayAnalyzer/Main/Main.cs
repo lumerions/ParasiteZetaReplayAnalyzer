@@ -497,7 +497,7 @@ public class InternalMain : Other
         });
 
         Console.WriteLine($"Replays scanned: {ReplaysAnalyzed}");
-        Console.WriteLine($"Cache Used:{UseCache}");
+        Console.WriteLine($"Cache Used: {UseCache}");
       //  var MostPlayedWith = FinalResults.OrderByDescending(i => i.Value.GamesPlayed);
 
       //  foreach (var item in MostPlayedWith)
