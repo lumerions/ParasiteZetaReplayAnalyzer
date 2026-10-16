@@ -32,11 +32,6 @@ public class DataCalculator
         public decimal AlienToHumanRatio { get; set; }
     } 
 
-    public class BestItem
-    {
-        
-    }
-
     public static List<KDResult> GetHighestKD (ConcurrentDictionary<string, Models.Models.FinalResultsDto> FinalResults)
     {
         var HighestKd = FinalResults.OrderByDescending(i => i.Value.Deaths == 0 ? 1 : (decimal) (i.Value.AlienKills + i.Value.HumanKills) / i.Value.Deaths).Select(v => new KDResult

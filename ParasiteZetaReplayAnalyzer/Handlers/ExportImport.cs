@@ -12,7 +12,7 @@ namespace Internal.ExportImporter;
 public class ExportImport
 {
     private static readonly string CSVPlayerDataString = "PlayerHandle, PlayerName, ReplayName";
-    private static readonly string CSVGameDataString = "ReplayName, ChatMessageCount, ReplayLength, WinningAlienUnitType";
+    private static readonly string CSVGameDataString = "ReplayName, ChatMessageCount, ReplayLength, WinningAlienUnitType, HighestPlayerKillsHandle, HighestPlayerKills";
     private static readonly string CSVDataString = "AlienKills, HumanKills, MechKills, Ties, Victories, GamesPlayed, Deaths, PlayerHandle";
     public static void ExportAsXml (ConcurrentDictionary<string, Models.Models.FinalResultsDto> ResultsData, List<Models.Models.IndividualGameResultsDto> GameResults, bool Cache)
     {
@@ -59,6 +59,8 @@ public class ExportImport
                 writer.WriteElementString("rn", item.ReplayName.ToString());
                 writer.WriteElementString("messagescount", item.ChatMessageCount.ToString());
                 writer.WriteElementString("rl", item.ReplayLength.ToString());
+                writer.WriteElementString("hpkh", item.HighestPlayerKillsHandle);
+                writer.WriteElementString("hpkc", item.HighestPlayerKills.ToString());
                 writer.WriteElementString("waut", item.WinningAlienUnitType == null ? "" : item.WinningAlienUnitType.ToString());
                 writer.WriteStartElement("players");
 
@@ -70,7 +72,6 @@ public class ExportImport
                     writer.WriteElementString("rfn", playerItem.ReplayName);
                     writer.WriteEndElement();
                 }
-
                 writer.WriteEndElement();
             }
 
@@ -132,13 +133,15 @@ public class ExportImport
                 var ChatMessageCount = item.ChatMessageCount;
                 var ReplayName = item.ReplayName;
                 var WinningAlienUnitType = item.WinningAlienUnitType;
+                var HighestPlayerKillsHandle = item.HighestPlayerKillsHandle;
+                var HighestPlayerKills = item.HighestPlayerKills;
 
                 if (ReplayName.Contains(","))
                 {
                     ReplayName.Replace(",", "");
                 }
 
-                CSVGameData.Add($"{ReplayName},{ChatMessageCount},{ReplayLength},{WinningAlienUnitType}");
+                CSVGameData.Add($"{ReplayName},{ChatMessageCount},{ReplayLength},{WinningAlienUnitType},{HighestPlayerKillsHandle},{HighestPlayerKills}");
 
                 foreach (var playerItem in item.Players)
                 {
@@ -203,8 +206,10 @@ public class ExportImport
                 var ReplayName = element.Element("rn")?.Value;
                 var MessagesCount = element.Element("messagescount")?.Value;
                 var ReplayLength = element.Element("rl")?.Value;
+                var HighestPlayerKillsHand = element.Element("hpkh")?.Value;
+                var HighestPlayerKillCount = element.Element("hpkc")?.Value;
 
-                if (int.TryParse(MessagesCount, out var MessagesCountInt) && double.TryParse(ReplayLength, out var ReplayLengthInt))
+                if (int.TryParse(MessagesCount, out var MessagesCountInt) && int.TryParse(HighestPlayerKillCount, out var HighestPlayerKillCountInt) && double.TryParse(ReplayLength, out var ReplayLengthInt))
                 {
                     var PlayersList = new List<Models.Models.PlayersReplayData>();
 
@@ -226,7 +231,9 @@ public class ExportImport
                         ReplayName = ReplayName,
                         ChatMessageCount = MessagesCountInt,
                         ReplayLength = ReplayLengthInt,
-                        Players = PlayersList
+                        Players = PlayersList,
+                        HighestPlayerKillsHandle = HighestPlayerKillsHand,
+                        HighestPlayerKills = HighestPlayerKillCountInt
                     });
                 }
             }
@@ -253,13 +260,6 @@ public class ExportImport
         var CSVLines = File.ReadAllLines(CSVFilePath);
         if (CSVLines.Length == 0) return new Models.Models.CombinedDataResults {GameResults = new(), FinalResults = new() , PlayerReplayData = new()};
 
-        var FinalMechKills = 0;
-        var FinalHumanKills = 0;
-        var FinalAlienKills = 0;
-        var FinalGamesPlayed = 0;
-        var FinalVictoryCount = 0;
-        var FinalTieCount = 0;
-        var FinalDeathCount = 0;
         var PlayerStats = new Dictionary<string, Models.Models.FinalResultsDto>();
 
         if (CSVLines[0].StartsWith("AlienKills"))
@@ -311,14 +311,21 @@ public class ExportImport
                 var ChatMessageCount = LineSplit[1];
                 var ReplayLength = LineSplit[2];
                 var WinningAlienUnitType = LineSplit[3];
+                var HighestPlayerKillsHandle = LineSplit[4];
+                var HighestPlayerKills = LineSplit[5];
 
-                GameResults.Add(new Models.Models.IndividualGameResultsDto
+                if (int.TryParse(HighestPlayerKills, out var HighestPlayerKillInt)) 
                 {
-                    ReplayName = ReplayName,
-                    ChatMessageCount = int.TryParse(ChatMessageCount, out var count) ? count : 0,
-                    ReplayLength = double.TryParse(ReplayLength, out var doublecount) ? doublecount : 0,
-                    WinningAlienUnitType = WinningAlienUnitType
-                });
+                    GameResults.Add(new Models.Models.IndividualGameResultsDto
+                    {
+                        ReplayName = ReplayName,
+                        ChatMessageCount = int.TryParse(ChatMessageCount, out var count) ? count : 0,
+                        ReplayLength = double.TryParse(ReplayLength, out var doublecount) ? doublecount : 0,
+                        WinningAlienUnitType = WinningAlienUnitType,
+                        HighestPlayerKillsHandle = HighestPlayerKillsHandle,
+                        HighestPlayerKills = HighestPlayerKillInt
+                    });
+                }
             }
 
             var CombinedObject = new Models.Models.CombinedDataResults 
@@ -391,6 +398,8 @@ public class ExportImport
                     ChatMessageCount = item.ChatMessageCount,
                     ReplayLength = item.ReplayLength,
                     WinningAlienUnitType = item.WinningAlienUnitType,
+                    HighestPlayerKillsHandle = item.HighestPlayerKillsHandle,
+                    HighestPlayerKills = item.HighestPlayerKills,
                     Players = PlayerData
                 });
             }

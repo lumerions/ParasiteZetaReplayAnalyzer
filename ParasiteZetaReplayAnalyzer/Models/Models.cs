@@ -31,6 +31,8 @@ public class Models
         public int ChatMessageCount { get; init; }
         public double ReplayLength { get; init; }
         public string? WinningAlienUnitType { get; init; }
+        public string HighestPlayerKillsHandle { get; init; }
+        public int HighestPlayerKills { get; init; }
         public List<PlayersReplayData> Players { get; init; }
     }
 

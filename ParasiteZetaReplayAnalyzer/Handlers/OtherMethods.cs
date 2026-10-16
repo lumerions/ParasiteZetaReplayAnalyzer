@@ -78,6 +78,8 @@ public class Other
                 ChatMessageCount = x.ChatMessageCount,
                 ReplayLength = x.ReplayLength,
                 WinningAlienUnitType = x.WinningAlienUnitType,
+                HighestPlayerKillsHandle = x.HighestPlayerKillsHandle,
+                HighestPlayerKills = x.HighestPlayerKills,
                 Players = CombinedData.PlayerReplayData.Where(item => item.ReplayName == x.ReplayName).Select(item => new Models.Models.PlayersReplayData
                 {
                     ReplayName = item.ReplayName,

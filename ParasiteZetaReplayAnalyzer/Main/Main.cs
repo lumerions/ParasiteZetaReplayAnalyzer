@@ -146,6 +146,7 @@ public class InternalMain : Other
         var AliveAlienPlayers = new HashSet<string>();
         var AliveHumanPlayers = new HashSet<string>();
         var DeathCounts = new int[14];
+        var KillCounts = new int[14];
 
         foreach (var unit in replay.TrackerEvents.SUnitBornEvents)
         {
@@ -233,11 +234,13 @@ public class InternalMain : Other
             if (AlienKill)
             {
                 ExistingAlienKills += 1;
+                KillCounts[KillerId] += 1;
             } else
             {
                 if (!MechKill)
                 {
                     ExistingHumanKills += 1;
+                    KillCounts[KillerId] += 1;
                 } else
                 {
                     ExistingMechKills += 1;
@@ -398,7 +401,9 @@ public class InternalMain : Other
                 ChatMessageCount = ReplayChatMessageCount,
                 ReplayLength = TimeSpanMinutes,
                 WinningAlienUnitType = LeastUsedAlienForm,
-                Players = PlayerData
+                Players = PlayerData,
+                HighestPlayerKillsHandle = GetHandlesByPlayerId(Array.IndexOf(KillCounts, KillCounts.Max())),
+                HighestPlayerKills = KillCounts.Max()
             });
         }
 
@@ -422,12 +427,9 @@ public class InternalMain : Other
         if (UseCache)
         {
             var CurrentCachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
-            Console.WriteLine($"Cache file bytes: {new FileInfo(CachedJsonData).Length}");
-            Console.WriteLine($"Cached games: {CurrentCachedData.GameResults?.Count}, players: {CurrentCachedData.FinalResultsList?.Count}");
             GameResults = CurrentCachedData.GameResults;
             FinalResults = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(CurrentCachedData.FinalResultsList);
         }
-
 
         foreach (var item in Directory.GetFiles(DefaultSC2DocumentPath))
         {
