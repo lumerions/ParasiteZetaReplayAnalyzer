@@ -517,7 +517,6 @@ public class InternalMain : Other
           //      Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
            // }
         //}
-        Console.WriteLine($"Games: {GameResults.Count}, unique replay names: {GameResults.Select(g => g.ReplayName).Distinct().Count()}");
         ExportImport.ExportAsJson(FinalResults, GameResults, true);
         System.IO.File.WriteAllText(CacheInfo, DateTime.UtcNow.ToString("O"));
         stopwatch.Stop();
@@ -546,12 +545,11 @@ public class InternalMain : Other
                 handle2Value = playerhand;
             }
         }
-        Console.WriteLine(ExportSC2Handle);
 
         string playerHandle = (handle1gp > handle2gp) ? handle1Value : handle2Value;
         var hand = string.IsNullOrEmpty(ExportSC2Handle) ? playerHandle : ExportSC2Handle;
         var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(hand);
-        Console.WriteLine(ResultGamesPlayed);
+        
         return new Models.Models.CombinedDataResults 
         {
             FinalResults = new Models.Models.FinalResultsDto {

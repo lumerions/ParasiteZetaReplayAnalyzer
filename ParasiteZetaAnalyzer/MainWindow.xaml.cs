@@ -13,7 +13,6 @@ using Internal.Models;
 using Internal.Main;
 using Internal.Start;
 using Internal.Calc;
-using System.IO;
 using System.Collections.Concurrent;
 using Microsoft.Win32;
 
@@ -25,19 +24,22 @@ namespace ParasiteZetaAnalyzer
     public partial class MainWindow : Window
     {
         private Models.CombinedDataResults CombinedResults;
-        private readonly bool CacheLoad = false;
         public MainWindow()
         {
-            var UserCacheLocation = System.IO.Path.Combine(AppContext.BaseDirectory, "UserCache");
-            var CacheInfo = System.IO.Path.Combine(UserCacheLocation, "CacheInfo");
-            var CachedData = System.IO.Path.Combine(UserCacheLocation, "CacheData.json");
-            if (File.Exists(CacheInfo) && System.IO.File.Exists(CachedData))
-            {
-                CacheLoad = true;
-            }
             MessageBox.Show("It may take a while to load your data.");
             InitializeComponent();
-            Program.Main(Array.Empty<string>());
+            Loaded += MainWindow_Loaded;
+        }
+
+        private async void MainWindow_Loaded (object sender, RoutedEventArgs a)
+        {
+            Loaded -= MainWindow_Loaded;
+            try
+            {
+                await Task.Run(() => Program.Main(Array.Empty<string>()));
+            } catch (Exception err) {
+                MessageBox.Show(err.ToString());
+            }
         }
 
         private ConcurrentDictionary<string, Models.FinalResultsDto> SetUpData ()
@@ -147,21 +149,23 @@ namespace ParasiteZetaAnalyzer
 
         private void GameData_Click(object sender, RoutedEventArgs a)
         {
-            OutputBox.Clear();
+            var SBuilder = new StringBuilder();
             CombinedResults = InternalMain.GetLoadedReplayData();
             foreach (var item in CombinedResults.GameResults)
             {
-                OutputBox.AppendText("ReplayName: " + item.ReplayName + Environment.NewLine);
-                OutputBox.AppendText("MessagesCount: " + item.ChatMessageCount + Environment.NewLine);
-                OutputBox.AppendText("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
-                OutputBox.AppendText("Players: " + Environment.NewLine);
+                SBuilder.AppendLine("ReplayName: " + item.ReplayName + Environment.NewLine);
+                SBuilder.AppendLine("MessagesCount: " + item.ChatMessageCount + Environment.NewLine);
+                SBuilder.AppendLine("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
+                SBuilder.AppendLine("Players: " + Environment.NewLine);
                 foreach (var PlayerItem in item.Players)
                 {
-                    OutputBox.AppendText("PlayerName: " + PlayerItem.PlayerUsername + Environment.NewLine);
-                    OutputBox.AppendText("PlayerHandle: " + PlayerItem.PlayerHandle + Environment.NewLine);
+                    SBuilder.AppendLine("PlayerName: " + PlayerItem.PlayerUsername + Environment.NewLine);
+                    SBuilder.AppendLine("PlayerHandle: " + PlayerItem.PlayerHandle + Environment.NewLine);
                 }
-                OutputBox.AppendText(Environment.NewLine);
+                SBuilder.AppendLine();
             }
+
+            OutputBox.Text = SBuilder.ToString();
         }
 
         private void HighestKd_Click(object sender, RoutedEventArgs a)
