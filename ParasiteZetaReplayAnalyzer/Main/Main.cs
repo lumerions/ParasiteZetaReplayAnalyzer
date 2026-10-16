@@ -425,15 +425,26 @@ public class InternalMain : Other
 
     public static async Task StartLoadingReplays ()
     {
-        var UseCache = false;
         var UserCacheLocation = Path.Combine(AppContext.BaseDirectory, "UserCache");
         var CacheInfo = Path.Combine(UserCacheLocation, "CacheInfo");
         var CachedJsonData = Path.Combine(UserCacheLocation, "CacheData.json");
         var ReplayPaths = new List<string>();
+        var UseCache = System.IO.File.Exists(CacheInfo) && System.IO.File.Exists(CachedJsonData);
         Stopwatch stopwatch = new();
         stopwatch.Start();
         var Count = 0;
         var DefaultSC2DocumentPath = Path.Combine(DefaultDocumentsPath, "StarCraft II");
+
+        if (UseCache)
+        {
+            var CurrentCachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
+            Console.WriteLine($"Cache file bytes: {new FileInfo(CachedJsonData).Length}");
+            Console.WriteLine($"Cached games: {CurrentCachedData.GameResults?.Count}, players: {CurrentCachedData.FinalResultsList?.Count}");
+            GameResults = CurrentCachedData.GameResults;
+            FinalResults = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(CurrentCachedData.FinalResultsList);
+        }
+
+
         foreach (var item in Directory.GetFiles(DefaultSC2DocumentPath))
         {
             if (Count == 2)
@@ -464,14 +475,13 @@ public class InternalMain : Other
 
                     foreach (var ReplayPath in Directory.EnumerateFiles(UserMultiplayerFolder, "*.SC2Replay"))
                     {
-                        if (System.IO.File.Exists(CacheInfo) && System.IO.File.Exists(CachedJsonData))
+                        if (UseCache)
                         {
                             DateTime creationUTC = System.IO.File.GetLastWriteTimeUtc(ReplayPath);
                             DateTimeOffset fileCreationDate = DateTimeOffset.Parse(creationUTC.ToString("O"));
                             string cacheInformation = System.IO.File.ReadAllText(CacheInfo);
                             DateTimeOffset cacheInformationDate = DateTimeOffset.Parse(cacheInformation);
 
-                            UseCache = true;
                             if (fileCreationDate > cacheInformationDate)
                             {
                                 ReplayPaths.Add(ReplayPath);
@@ -507,97 +517,8 @@ public class InternalMain : Other
           //      Console.WriteLine($"[{item.Key},{item.Value.GamesPlayed}-{item.Value.Victories}-{item.Value.AlienKills}-{item.Value.HumanKills}-{item.Value.MechKills}]");
            // }
         //}
-
-        if (UseCache) {
-            var NewCachedFinalResults = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(
-                FinalResults.Select(kvp => new KeyValuePair<string, Models.Models.FinalResultsDto>(kvp.Key, new Models.Models.FinalResultsDto
-                {
-                    AlienKills = kvp.Value.AlienKills,
-                    HumanKills = kvp.Value.HumanKills,
-                    MechKills = kvp.Value.MechKills,
-                    Deaths = kvp.Value.Deaths,
-                    Ties = kvp.Value.Ties,
-                    Victories = kvp.Value.Victories,
-                    GamesPlayed = kvp.Value.GamesPlayed
-                })
-            ));
-
-            var NewCachedGameResults =
-                GameResults.Select(item => new Models.Models.IndividualGameResultsDto {
-                    ReplayName = item.ReplayName,
-                    ChatMessageCount = item.ChatMessageCount,
-                    ReplayLength = item.ReplayLength,
-                    WinningAlienUnitType = item.WinningAlienUnitType,
-                    Players = item.Players.Select(playerItem => new Models.Models.PlayersReplayData
-                    {
-                        PlayerUsername = playerItem.PlayerUsername,
-                        PlayerHandle = playerItem.PlayerHandle,
-                        ReplayName = playerItem.ReplayName
-                    }).ToList()
-                }).ToList();
-
-            var CachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
-            var GameResultsCombinedConcat = NewCachedGameResults.Concat(CachedData.GameResults);
-            var FinalResultsCombinedConcat = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(CachedData.FinalResultsList);
-
-            foreach (var (key, value) in NewCachedFinalResults)
-            {
-                FinalResultsCombinedConcat.AddOrUpdate(
-                    key,
-                    _ => new Models.Models.FinalResultsDto
-                    {
-                        AlienKills = value.AlienKills,
-                        HumanKills = value.HumanKills,
-                        MechKills = value.MechKills,
-                        Deaths = value.Deaths,
-                        Ties = value.Ties,
-                        Victories = value.Victories,
-                        GamesPlayed = value.GamesPlayed
-                    },
-                    (_, cached) => new Models.Models.FinalResultsDto
-                    {
-                        AlienKills = cached.AlienKills + value.AlienKills,
-                        HumanKills = cached.HumanKills + value.HumanKills,
-                        MechKills = cached.MechKills + value.MechKills,
-                        Deaths = cached.Deaths + value.Deaths,
-                        Ties = cached.Ties + value.Ties,
-                        Victories = cached.Victories + value.Victories,
-                        GamesPlayed = cached.GamesPlayed + value.GamesPlayed
-                    }
-                );
-            }
-
-            var FinalResultsCombined = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(
-                FinalResultsCombinedConcat.Select(kvp => new KeyValuePair<string, Models.Models.FinalResultsDto>(kvp.Key, new Models.Models.FinalResultsDto
-                {
-                    AlienKills = kvp.Value.AlienKills,
-                    HumanKills = kvp.Value.HumanKills,
-                    MechKills = kvp.Value.MechKills,
-                    Deaths = kvp.Value.Deaths,
-                    Ties = kvp.Value.Ties,
-                    Victories = kvp.Value.Victories,
-                    GamesPlayed = kvp.Value.GamesPlayed
-                })
-            ));
-
-            var GameResultsCombined = 
-                GameResultsCombinedConcat.Select(item => new Models.Models.IndividualGameResultsDto
-                {
-                    ReplayName = item.ReplayName,
-                    ChatMessageCount = item.ChatMessageCount,
-                    ReplayLength = item.ReplayLength,
-                    WinningAlienUnitType = item.WinningAlienUnitType,
-                    Players = item.Players
-                }).ToList();
-
-            ExportImport.ExportAsJson(FinalResultsCombined, GameResultsCombined, true);
-            GameResults = GameResultsCombined;
-            FinalResults = FinalResultsCombined;
-        } else
-        {
-            ExportImport.ExportAsJson(FinalResults, GameResults, true);
-        }
-
+        Console.WriteLine($"Games: {GameResults.Count}, unique replay names: {GameResults.Select(g => g.ReplayName).Distinct().Count()}");
+        ExportImport.ExportAsJson(FinalResults, GameResults, true);
         System.IO.File.WriteAllText(CacheInfo, DateTime.UtcNow.ToString("O"));
         stopwatch.Stop();
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
@@ -605,40 +526,42 @@ public class InternalMain : Other
 
     public static Models.Models.CombinedDataResults GetLoadedReplayData () 
     {
-        var FinalMechKills = 0;
-        var FinalAlienKills = 0; 
-        var FinalHumanKills = 0; 
-        var FinalTieCount = 0; 
-        var FinalVictoryCount = 0; 
-        var FinalGamesPlayed = 0; 
-        var FinalDeathCount = 0;
-        string playerHandle = "";
+        var handle1gp = 0;
+        var handle2gp = 0;
+        var handle1Value = "";
+        var handle2Value = "";
 
-        foreach (var playerhand in UserPlayerHandles)
+        foreach (var (index, playerhand) in UserPlayerHandles.Index())
         {
-            playerHandle = playerhand;
-        }
+            var (MechKills, AlienKills, HumanKills, TieCount, VictoryCount, GamesPlayed, DeathCount) = GetUserInformation(playerhand);
 
-        var hand = ExportSC2Handle == null ? playerHandle : ExportSC2Handle;
+            if (index == 0)
+            {
+                handle1gp = GamesPlayed;
+                handle1Value = playerhand;
+            }
+            if (index == 1)
+            {
+                handle2gp = GamesPlayed;
+                handle2Value = playerhand;
+            }
+        }
+        Console.WriteLine(ExportSC2Handle);
+
+        string playerHandle = (handle1gp > handle2gp) ? handle1Value : handle2Value;
+        var hand = string.IsNullOrEmpty(ExportSC2Handle) ? playerHandle : ExportSC2Handle;
         var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(hand);
-        FinalMechKills += ResultMechKills;
-        FinalAlienKills += ResultAlienKills;
-        FinalHumanKills += ResultHumanKills;
-        FinalTieCount += ResultTieCount;
-        FinalVictoryCount += ResultVictoryCount;
-        FinalGamesPlayed += ResultGamesPlayed;
-        FinalDeathCount += ResultDeathCount;
-    
+        Console.WriteLine(ResultGamesPlayed);
         return new Models.Models.CombinedDataResults 
         {
             FinalResults = new Models.Models.FinalResultsDto {
-                AlienKills = FinalAlienKills,
-                HumanKills = FinalHumanKills,
-                MechKills = FinalMechKills,
-                Ties = FinalTieCount,
-                Victories = FinalVictoryCount,
-                Deaths = FinalDeathCount,
-                GamesPlayed = FinalGamesPlayed
+                AlienKills = ResultAlienKills,
+                HumanKills = ResultHumanKills,
+                MechKills = ResultMechKills,
+                Ties = ResultTieCount,
+                Victories = ResultVictoryCount,
+                Deaths = ResultDeathCount,
+                GamesPlayed = ResultGamesPlayed
             },
             GameResults = GameResults,
             PlayerReplayData = new()
