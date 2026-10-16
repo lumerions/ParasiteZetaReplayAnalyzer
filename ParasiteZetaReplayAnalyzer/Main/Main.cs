@@ -17,6 +17,7 @@ public class InternalMain : Other
 {
     private static List<Models.Models.IndividualGameResultsDto> GameResults = new List<Models.Models.IndividualGameResultsDto>();
     private static int ReplaysAnalyzed = 0;
+    private static readonly object gameResultLock = new();
     private static ConcurrentDictionary<string, Models.Models.FinalResultsDto> FinalResults = new();
     private static readonly string DefaultDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     private static readonly ReplayDecoder decoder = new();
@@ -292,19 +293,10 @@ public class InternalMain : Other
             
             if (DeathIncrement == null)
             {
-                if (PlayerHandle.Contains("?"))
+                var FindResult = PlayerHandle.IndexOf("?");
+                if (FindResult >= 0)
                 {
-                    var QuestionMarkFound = false;
-
-                    StringBuilder sb = new();
-
-                    foreach (var character in PlayerHandle)
-                    {
-                        if (QuestionMarkFound) continue;
-                        if (character.ToString() == "?") QuestionMarkFound = true;
-                        if (!QuestionMarkFound) sb.Append(character);
-                    }
-                    PlayerHandle = sb.ToString();
+                    PlayerHandle = PlayerHandle[..FindResult];
                 }
             }
 
@@ -358,21 +350,10 @@ public class InternalMain : Other
         foreach (var item in AliveAlienPlayers)
         {
             if (item == null) continue;
-
-            if (item.Contains("?"))
-            {
-                StringBuilder sb = new();
-
-                var QuestionMarkFound = false;
-
-                foreach (var character in item)
-                {
-                    if (character.ToString() == "?") QuestionMarkFound = true;
-                    if (QuestionMarkFound) sb.Append(character);
-                }
-
-                MostUsedAlienForm.Add(sb.ToString());
-            }
+            var FindResult = item.IndexOf("?");
+            if (FindResult == -1) continue;
+            var AlienForm = item[..FindResult];
+            MostUsedAlienForm.Add(AlienForm);
             UpdateWinLoseCount(item, AlienWin, WhoWon == "Tie" ? true : null, null, 0);
         }
 
@@ -409,14 +390,17 @@ public class InternalMain : Other
         TimeSpan TimeSpanSeconds = TimeSpan.FromSeconds(ReplayLength);
         double TimeSpanMinutes = TimeSpanSeconds.Minutes;
 
-        GameResults.Add(new Models.Models.IndividualGameResultsDto
+        lock (gameResultLock)
         {
-            ReplayName = ReplayFileName,
-            ChatMessageCount = ReplayChatMessageCount,
-            ReplayLength = TimeSpanMinutes,
-            WinningAlienUnitType = LeastUsedAlienForm,
-            Players = PlayerData
-        });
+            GameResults.Add(new Models.Models.IndividualGameResultsDto
+            {
+                ReplayName = ReplayFileName,
+                ChatMessageCount = ReplayChatMessageCount,
+                ReplayLength = TimeSpanMinutes,
+                WinningAlienUnitType = LeastUsedAlienForm,
+                Players = PlayerData
+            });
+        }
 
         Interlocked.Increment(ref ReplaysAnalyzed);
 
@@ -549,7 +533,7 @@ public class InternalMain : Other
         string playerHandle = (handle1gp > handle2gp) ? handle1Value : handle2Value;
         var hand = string.IsNullOrEmpty(ExportSC2Handle) ? playerHandle : ExportSC2Handle;
         var (ResultMechKills, ResultAlienKills, ResultHumanKills, ResultTieCount, ResultVictoryCount, ResultGamesPlayed, ResultDeathCount) = GetUserInformation(hand);
-        
+
         return new Models.Models.CombinedDataResults 
         {
             FinalResults = new Models.Models.FinalResultsDto {
