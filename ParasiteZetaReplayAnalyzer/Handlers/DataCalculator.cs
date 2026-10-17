@@ -5,15 +5,17 @@ using Internal.Models;
 
 namespace Internal.Calc;
 
+
 public class DataCalculator
 {
     public static List<string> GetHighestWinningAlienForm (List<Models.Models.IndividualGameResultsDto> GameResults)
     {
         var HighestWinningAlienForms = 
-        GameResults.Where(x => x.WinningAlienUnitType != null)
-        .CountBy(x => x.WinningAlienUnitType)
-        .OrderByDescending(i => i.Value)
-        .Select(x => x.Key)
+        GameResults.Where(x => !string.IsNullOrEmpty(x.WinningAlienUnitType))
+        .GroupBy(item => item)
+        .OrderByDescending(g => g.Count())
+        .Select(groupeditem => groupeditem.Key.WinningAlienUnitType)
+        .Distinct()
         .ToList();
 
         return HighestWinningAlienForms;

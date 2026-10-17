@@ -330,7 +330,8 @@ public class InternalMain : Other
             if (item == null) continue;
             var FindResult = item.IndexOf("?");
             if (FindResult == -1) continue;
-            var AlienForm = item[..FindResult];
+            var parts = item.Split("?");
+            var AlienForm = parts[1];
             MostUsedAlienForm.Add(AlienForm);
             UpdateWinLoseCount(item, AlienWin, WhoWon == "Tie" ? true : null, null, 0);
         }
@@ -401,7 +402,7 @@ public class InternalMain : Other
         string cacheInformation = "";
         DateTimeOffset? cacheInformationDate = null;
         var RunTime = DateTime.UtcNow.ToString("O");
-        
+        UseCache = false;
         if (UseCache)
         {
             var CurrentCachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
