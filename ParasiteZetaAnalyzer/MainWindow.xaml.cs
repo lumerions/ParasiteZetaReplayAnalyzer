@@ -156,6 +156,9 @@ namespace ParasiteZetaAnalyzer
                 SBuilder.AppendLine("ReplayName: " + item.ReplayName + Environment.NewLine);
                 SBuilder.AppendLine("MessagesCount: " + item.ChatMessageCount + Environment.NewLine);
                 SBuilder.AppendLine("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
+                SBuilder.AppendLine("GameMvp: " + item.HighestPlayerKillsHandle + " " + item.HighestPlayerKills + Environment.NewLine);
+                SBuilder.AppendLine("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
+
                 SBuilder.AppendLine("Players: " + Environment.NewLine);
                 foreach (var PlayerItem in item.Players)
                 {

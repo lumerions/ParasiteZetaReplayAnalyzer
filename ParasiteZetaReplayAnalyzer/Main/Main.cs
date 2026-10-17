@@ -22,6 +22,16 @@ public class InternalMain : Other
     private static readonly string DefaultDocumentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
     private static readonly ReplayDecoder decoder = new();
     private static readonly WshShell shell = new();
+    private static readonly ReplayDecoderOptions options = new ReplayDecoderOptions
+    {
+        Initdata = false, 
+        Details = true, 
+        Metadata = true, 
+        TrackerEvents = true,
+        GameEvents = false, 
+        MessageEvents = true, 
+        AttributeEvents = false
+    };
 
     public static void UpdateStatData (string PlayerHandle, bool IncrementGamesPlayed, int ExistingMechKills, int ExistingAlienKills, int ExistingHumanKills, int ExistingTies, int ExistingVictories, int ExistingGamesPlayed, int ExistingDeaths)
     {
@@ -92,16 +102,6 @@ public class InternalMain : Other
     public static async Task<bool> LoadReplay (string LoadReplayPath)
     {
         var ReplayFileName = Path.GetFileName(LoadReplayPath);
-        var options = new ReplayDecoderOptions
-        {
-            Initdata = false, 
-            Details = true, 
-            Metadata = true, 
-            TrackerEvents = true,
-            GameEvents = false, 
-            MessageEvents = true, 
-            AttributeEvents = false 
-        };
         
         Sc2Replay? replay = await decoder.DecodeAsync(LoadReplayPath, options);
 
@@ -147,7 +147,7 @@ public class InternalMain : Other
         var AliveHumanPlayers = new HashSet<string>();
         var DeathCounts = new int[14];
         var KillCounts = new int[14];
-
+        
         foreach (var unit in replay.TrackerEvents.SUnitBornEvents)
         {
             var UnitType = unit.UnitTypeName;
@@ -155,11 +155,6 @@ public class InternalMain : Other
             var Died = unit.SUnitDiedEvent;
 
             if (PlayerIdWhoDied <= 0 || PlayerIdWhoDied > 12)
-            {
-                continue;
-            }
-
-            if (!AliveAlienPlayers.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)) && !AliveHumanPlayers.Contains(GetHandlesByPlayerId(PlayerIdWhoDied))) 
             {
                 continue;
             }
@@ -198,25 +193,14 @@ public class InternalMain : Other
             var PlayerUnitTypeWhoDied = KillerUnitBornEvent.UnitTypeName;
             var AlienKill = IsAlienUnit(PlayerUnitTypeWhoDied);
             var MechKill = IsMechUnit(PlayerUnitTypeWhoDied);
-            var UserUsingApplicationDied = false;
 
             if (IsAlienUnit(UnitType))
             {
                 AliveAlienPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied) + "?" + UnitType);
-
-                if (UserPlayerHandles.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)))
-                {
-                    UserUsingApplicationDied = true;
-                }
             } else
             {
                 if (!IsMechUnit(UnitType)) {
                     AliveHumanPlayers.Remove(GetHandlesByPlayerId(PlayerIdWhoDied));
-
-                    if (UserPlayerHandles.Contains(GetHandlesByPlayerId(PlayerIdWhoDied)))
-                    {
-                        UserUsingApplicationDied = true;
-                    }
                 }
             }
 
@@ -233,25 +217,17 @@ public class InternalMain : Other
 
             if (AlienKill)
             {
-                ExistingAlienKills += 1;
                 KillCounts[KillerId] += 1;
             } else
             {
                 if (!MechKill)
                 {
-                    ExistingHumanKills += 1;
                     KillCounts[KillerId] += 1;
-                } else
-                {
-                    ExistingMechKills += 1;
-                }
+                } 
             }
 
-            if (UserUsingApplicationDied)
-            {
-                DeathCounts[PlayerIdWhoDied] = DeathCounts[PlayerIdWhoDied] += 1;
-            }
-
+            DeathCounts[PlayerIdWhoDied] = DeathCounts[PlayerIdWhoDied] += 1;
+            
             FinalResults.AddOrUpdate(PlayerHandle, 
             new Models.Models.FinalResultsDto
             {
@@ -266,13 +242,13 @@ public class InternalMain : Other
             (key, currentData) => {
                 return new Models.Models.FinalResultsDto 
                 {
-                    AlienKills = ExistingAlienKills,
-                    HumanKills = ExistingHumanKills,
-                    MechKills = ExistingMechKills,
-                    Ties = ExistingTies,
-                    Victories = ExistingVictories,
-                    Deaths = ExistingDeaths,
-                    GamesPlayed = ExistingGamesPlayed
+                    AlienKills = currentData.AlienKills + (AlienKill ? 1 : 0),
+                    HumanKills = currentData.HumanKills + (!MechKill ? 1 : 0),
+                    MechKills = currentData.MechKills + (MechKill ? 1 : 0),
+                    Ties = currentData.Ties,
+                    Victories = currentData.Victories,
+                    Deaths = currentData.Deaths,
+                    GamesPlayed = currentData.GamesPlayed
                 };
             });
         }
@@ -293,7 +269,6 @@ public class InternalMain : Other
 
         void UpdateWinLoseCount (string PlayerHandle, bool Won, bool? Tie, bool? DeathIncrement, int DeathIncrementCount)
         {
-            
             if (DeathIncrement == null)
             {
                 var FindResult = PlayerHandle.IndexOf("?");
@@ -380,7 +355,7 @@ public class InternalMain : Other
             if (string.IsNullOrEmpty(handle))
                 continue;
 
-            var deathCount = DeathCounts[i];
+            var deathCount = Math.Min(DeathCounts[i], 1);
 
             if (deathCount == 0)
                 continue;
@@ -389,9 +364,9 @@ public class InternalMain : Other
         }
 
         var ReplayChatMessageCount = replay.ChatMessages.Count;
-        var ReplayLength = replay.Header.ElapsedGameLoops / 22.4;
-        TimeSpan TimeSpanSeconds = TimeSpan.FromSeconds(ReplayLength);
-        double TimeSpanMinutes = TimeSpanSeconds.Minutes;
+        var ReplayLength = replay.Header.ElapsedGameLoops / 22.4 / 60.0;
+        var KillCountHighest = KillCounts.Max();
+        var HighestPlayerKillsHandle = GetHandlesByPlayerId(Array.IndexOf(KillCounts, KillCountHighest));
 
         lock (gameResultLock)
         {
@@ -399,11 +374,11 @@ public class InternalMain : Other
             {
                 ReplayName = ReplayFileName,
                 ChatMessageCount = ReplayChatMessageCount,
-                ReplayLength = TimeSpanMinutes,
+                ReplayLength = ReplayLength,
                 WinningAlienUnitType = LeastUsedAlienForm,
                 Players = PlayerData,
-                HighestPlayerKillsHandle = GetHandlesByPlayerId(Array.IndexOf(KillCounts, KillCounts.Max())),
-                HighestPlayerKills = KillCounts.Max()
+                HighestPlayerKillsHandle = HighestPlayerKillsHandle,
+                HighestPlayerKills = KillCountHighest
             });
         }
 
@@ -423,12 +398,17 @@ public class InternalMain : Other
         stopwatch.Start();
         var Count = 0;
         var DefaultSC2DocumentPath = Path.Combine(DefaultDocumentsPath, "StarCraft II");
-
+        string cacheInformation = "";
+        DateTimeOffset? cacheInformationDate = null;
+        var RunTime = DateTime.UtcNow.ToString("O");
+        
         if (UseCache)
         {
             var CurrentCachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
             GameResults = CurrentCachedData.GameResults;
             FinalResults = new ConcurrentDictionary<string, Models.Models.FinalResultsDto>(CurrentCachedData.FinalResultsList);
+            cacheInformation = System.IO.File.ReadAllText(CacheInfo);
+            cacheInformationDate = DateTimeOffset.Parse(cacheInformation);
         }
 
         foreach (var item in Directory.GetFiles(DefaultSC2DocumentPath))
@@ -459,14 +439,13 @@ public class InternalMain : Other
                     var UserReplayFolder = Path.Combine(UserFolder, "Replays");
                     var UserMultiplayerFolder = Path.Combine(UserReplayFolder, "Multiplayer");
 
+
                     foreach (var ReplayPath in Directory.EnumerateFiles(UserMultiplayerFolder, "*.SC2Replay"))
                     {
                         if (UseCache)
                         {
                             DateTime creationUTC = System.IO.File.GetLastWriteTimeUtc(ReplayPath);
                             DateTimeOffset fileCreationDate = DateTimeOffset.Parse(creationUTC.ToString("O"));
-                            string cacheInformation = System.IO.File.ReadAllText(CacheInfo);
-                            DateTimeOffset cacheInformationDate = DateTimeOffset.Parse(cacheInformation);
 
                             if (fileCreationDate > cacheInformationDate)
                             {
@@ -504,7 +483,7 @@ public class InternalMain : Other
            // }
         //}
         ExportImport.ExportAsJson(FinalResults, GameResults, true);
-        System.IO.File.WriteAllText(CacheInfo, DateTime.UtcNow.ToString("O"));
+        System.IO.File.WriteAllText(CacheInfo, RunTime);
         stopwatch.Stop();
         Console.WriteLine(stopwatch.ElapsedMilliseconds);
     }
