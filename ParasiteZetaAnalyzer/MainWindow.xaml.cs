@@ -156,7 +156,7 @@ namespace ParasiteZetaAnalyzer
                 SBuilder.AppendLine("ReplayName: " + item.ReplayName + Environment.NewLine);
                 SBuilder.AppendLine("MessagesCount: " + item.ChatMessageCount + Environment.NewLine);
                 SBuilder.AppendLine("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
-                SBuilder.AppendLine("GameMvp: " + item.HighestPlayerKillsHandle + " " + item.HighestPlayerKills + Environment.NewLine);
+                SBuilder.AppendLine("GameMvpHandle/MvpKills: " + item.HighestPlayerKillsHandle + ";" + item.HighestPlayerKills + Environment.NewLine);
                 SBuilder.AppendLine("ReplayMinutes: " + item.ReplayLength + Environment.NewLine);
 
                 SBuilder.AppendLine("Players: " + Environment.NewLine);
@@ -177,6 +177,7 @@ namespace ParasiteZetaAnalyzer
             var HighestKd = DataCalculator.GetHighestKD(InternalMain.GetFinalResults());
             foreach (var kdItem in HighestKd)
             {
+                if (string.IsNullOrWhiteSpace(kdItem.Handle)) continue;
                 OutputBox.AppendText("Handle " + kdItem.Handle + Environment.NewLine);
                 OutputBox.AppendText("KD " + kdItem.Kd + Environment.NewLine);
             }
@@ -197,6 +198,7 @@ namespace ParasiteZetaAnalyzer
             var HighestKills = DataCalculator.GetHighestKills(InternalMain.GetFinalResults());
             foreach (var (key, value) in HighestKills)
             {
+                if (string.IsNullOrWhiteSpace(key)) continue;
                 var CombinedKillCount = value.AlienKills + value.HumanKills + value.MechKills;
                 OutputBox.AppendText("Handles " + key + Environment.NewLine);
                 OutputBox.AppendText("Kills " + CombinedKillCount + Environment.NewLine);
@@ -209,9 +211,19 @@ namespace ParasiteZetaAnalyzer
             var HighestDeaths = DataCalculator.GetHighestDeaths(InternalMain.GetFinalResults());
             foreach (var (key, value) in HighestDeaths)
             {
+                if (string.IsNullOrWhiteSpace(key)) continue;
                 OutputBox.AppendText("Handles " + key + Environment.NewLine);
                 OutputBox.AppendText("Deaths " + value.Deaths + Environment.NewLine);
             }
+        }
+
+        private void AverageGameData_Click(object sender, RoutedEventArgs a)
+        {
+            OutputBox.Clear();
+            var AverageGameStats = DataCalculator.GetAverageGameResults(InternalMain.GetGameResults(), InternalMain.GetFinalResults());
+            OutputBox.AppendText("AverageGameLength " + AverageGameStats.AverageGameLength + Environment.NewLine);
+            OutputBox.AppendText("AverageDeaths " + AverageGameStats.AverageDeaths + Environment.NewLine);
+            OutputBox.AppendText("AverageTies " + AverageGameStats.AverageTies + Environment.NewLine);
         }
     }
 }

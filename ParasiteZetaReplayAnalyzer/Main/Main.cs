@@ -375,7 +375,7 @@ public class InternalMain : Other
             {
                 ReplayName = ReplayFileName,
                 ChatMessageCount = ReplayChatMessageCount,
-                ReplayLength = ReplayLength,
+                ReplayLength = Math.Round(ReplayLength, 1),
                 WinningAlienUnitType = LeastUsedAlienForm,
                 Players = PlayerData,
                 HighestPlayerKillsHandle = HighestPlayerKillsHandle,

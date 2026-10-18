@@ -41,6 +41,8 @@
                           Click="HighestDeaths_Click"/>
                 <MenuItem Header="Highest Kills"
                           Click="HighestKills_Click"/>
+                <MenuItem Header="Average Game Data"
+                          Click="AverageGameData_Click"/>
             </MenuItem>
 
             <MenuItem Header="Export/Import">

@@ -5,7 +5,6 @@ using Internal.Models;
 
 namespace Internal.Calc;
 
-
 public class DataCalculator
 {
     public static List<string> GetHighestWinningAlienForm (List<Models.Models.IndividualGameResultsDto> GameResults)
@@ -33,6 +32,13 @@ public class DataCalculator
         public int HumanWins { get; set; }
         public decimal AlienToHumanRatio { get; set; }
     } 
+
+    public class AverageGameResult 
+    {
+        public double AverageGameLength { get; set; }
+        public double AverageDeaths { get; set; }
+        public double AverageTies { get; set; }
+    }
 
     public static List<KDResult> GetHighestKD (ConcurrentDictionary<string, Models.Models.FinalResultsDto> FinalResults)
     {
@@ -74,5 +80,19 @@ public class DataCalculator
             group => group.Key,
             group => group.Value
         );
+    }
+
+    public static AverageGameResult GetAverageGameResults (List<Models.Models.IndividualGameResultsDto> GameResults, ConcurrentDictionary<string, Models.Models.FinalResultsDto> FinalResults)
+    {
+        Console.WriteLine( FinalResults.Sum(x => x.Value.Deaths));
+                Console.WriteLine( FinalResults.Sum(x => x.Value.Ties));
+                Console.WriteLine( GameResults.Count);
+
+        return new AverageGameResult
+        {
+            AverageGameLength = Math.Round(GameResults.Average(x => x.ReplayLength), 1),
+            AverageDeaths = (double) FinalResults.Sum(x => x.Value.Deaths) / GameResults.Count,
+            AverageTies = (double) FinalResults.Sum(x => x.Value.Ties) / GameResults.Count
+        };
     }
 }
