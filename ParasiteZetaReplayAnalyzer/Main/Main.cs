@@ -402,7 +402,7 @@ public class InternalMain : Other
         string cacheInformation = "";
         DateTimeOffset? cacheInformationDate = null;
         var RunTime = DateTime.UtcNow.ToString("O");
-        UseCache = false;
+        
         if (UseCache)
         {
             var CurrentCachedData = ExportImport.ImportAsJson(Path.Combine(UserCacheLocation, "CacheData.json"), true);
