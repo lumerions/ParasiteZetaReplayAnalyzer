@@ -1,7 +1,7 @@
 <h1 align="center">Parasite Zeta Replay Analyzer</h1>
 
 <p align="center">
-  A C# tool for analyzing StarCraft II replays. <!-- TODO: one line on what it actually detects/outputs -->
+  A C# tool for analyzing StarCraft II replays for a popular SC2 arcade game named PARASITE - DELTA. 
 </p>
 
 <p align="center">
@@ -28,18 +28,17 @@
 ## Features
 
 - **SC2 replay analysis**: reads StarCraft II replay files and extracts match data
-- **Parasite analysis**: <!-- TODO: what is analyzed, e.g. a specific ability, unit, or build -->
-- **Two-project solution**: the analysis logic and the replay-handling project are split
-- <!-- TODO: output format (console, JSON, CSV, UI?) -->
+- **Parasite analysis**: Analyzes results like average game stats, player stats, player stat leaderboards and more!
+- **Share system**: Export/Import json, csv, xml and share an exported xml with a friend so they can import and view.
 
 ## Tech Stack
 
 | Layer | Tech |
 |---|---|
 | Language | C# |
-| Runtime | .NET <!-- TODO: target framework, check the .csproj --> |
+| Runtime | .NET  |
 | IDE / build | Visual Studio 2022 solution (`.sln`) |
-| Replay parsing | <!-- TODO: library used, e.g. s2protocol port or other --> |
+| Replay parsing | used s2protocol nuget library to analyze replay results |
 
 ## Installation
 
