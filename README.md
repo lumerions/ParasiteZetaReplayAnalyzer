@@ -36,7 +36,7 @@
 | Layer | Tech |
 |---|---|
 | Language | C# |
-| Runtime | .NET  |
+| Runtime | .NET 9.0 |
 | IDE / build | Visual Studio 2022 solution (`.sln`) |
 | Replay parsing | used s2protocol nuget library to analyze replay results |
 
