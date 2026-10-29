@@ -55,11 +55,7 @@ Or open `ParasiteZetaAnalyzer.sln` in Visual Studio 2022 and build from there.
 
 ## Usage
 
-<!-- TODO: how to run it and what to pass in -->
-
-```bash
-dotnet run --project ParasiteZetaAnalyzer -- <path-to-replay.SC2Replay>
-```
+Copy path of solution and open in visual studio 2022 to build yourself and then run
 
 ## Project Structure
 
